@@ -78,7 +78,7 @@ export function FileUploader({ dataType }: FileUploaderProps) {
     setError("")
 
     try {
-      // Get user profile to get user ID
+      // Get user profile to get user ID - now using mock implementation
       const userProfile = await getUserProfile(user.email)
       if (!userProfile || !userProfile.id) {
         throw new Error("User profile not found")
@@ -89,7 +89,7 @@ export function FileUploader({ dataType }: FileUploaderProps) {
       // Read file content
       const fileContent = await readFileContent(file)
 
-      // Process data based on type
+      // Process data based on type - now using mock implementations
       let result
 
       if (dataType === "sales") {

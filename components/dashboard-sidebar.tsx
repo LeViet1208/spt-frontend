@@ -1,7 +1,11 @@
 "use client"
 
-import { BarChart3, Home, Package, ShoppingCart, Upload, Users } from "lucide-react"
-import type { DashboardPage } from "@/components/dashboard"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { BarChart3, ShoppingCart, Package, Users, Upload, Settings } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import type { DashboardPage } from "./dashboard"
 
 interface DashboardSidebarProps {
   currentPage: DashboardPage
@@ -9,56 +13,68 @@ interface DashboardSidebarProps {
 }
 
 export function DashboardSidebar({ currentPage, setCurrentPage }: DashboardSidebarProps) {
-  const menuItems = [
-    {
-      id: "overview" as DashboardPage,
-      label: "Overview",
-      icon: Home,
-    },
-    {
-      id: "sales" as DashboardPage,
-      label: "Sales",
-      icon: BarChart3,
-    },
-    {
-      id: "inventory" as DashboardPage,
-      label: "Inventory",
-      icon: Package,
-    },
-    {
-      id: "customers" as DashboardPage,
-      label: "Customers",
-      icon: Users,
-    },
-    {
-      id: "import" as DashboardPage,
-      label: "Import Data",
-      icon: Upload,
-    },
-  ]
+  const router = useRouter()
 
   return (
-    <div className="w-64 border-r bg-muted/40">
+    <div className="flex h-screen w-[240px] flex-col border-r bg-muted/40">
       <div className="flex h-14 items-center border-b px-4">
-        <ShoppingCart className="mr-2 h-6 w-6" />
-        <span className="font-semibold">RetailAnalytics</span>
+        <Link href="/" className="flex items-center gap-2 font-semibold">
+          <ShoppingCart className="h-6 w-6" />
+          <span>RetailAnalytics</span>
+        </Link>
       </div>
-      <nav className="flex flex-col gap-1 p-2">
-        {menuItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setCurrentPage(item.id)}
-            className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
-              currentPage === item.id
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-            }`}
+      <ScrollArea className="flex-1 px-2 py-2">
+        <div className="space-y-1">
+          <Button
+            variant={currentPage === "overview" ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => setCurrentPage("overview")}
           >
-            <item.icon className="h-4 w-4" />
-            {item.label}
-          </button>
-        ))}
-      </nav>
+            <BarChart3 className="mr-2 h-4 w-4" />
+            Tổng quan
+          </Button>
+          <Button
+            variant={currentPage === "sales" ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => setCurrentPage("sales")}
+          >
+            <ShoppingCart className="mr-2 h-4 w-4" />
+            Doanh số
+          </Button>
+          <Button
+            variant={currentPage === "inventory" ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => setCurrentPage("inventory")}
+          >
+            <Package className="mr-2 h-4 w-4" />
+            Hàng tồn kho
+          </Button>
+          <Button
+            variant={currentPage === "customers" ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => setCurrentPage("customers")}
+          >
+            <Users className="mr-2 h-4 w-4" />
+            Khách hàng
+          </Button>
+          <Button
+            variant={currentPage === "import" ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => setCurrentPage("import")}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Nhập dữ liệu
+          </Button>
+          <Button
+            variant={currentPage === "settings" ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => setCurrentPage("settings")}
+          >
+            <Settings className="mr-2 h-4 w-4" />
+            Cài đặt tài khoản
+          </Button>
+        </div>
+      </ScrollArea>
     </div>
   )
 }

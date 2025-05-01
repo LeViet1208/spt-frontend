@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 interface DashboardShellProps {
   children: ReactNode
@@ -30,10 +31,15 @@ export function DashboardShell({ children }: DashboardShellProps) {
     }
   }
 
-  // Get user initials for avatar
+  // Get user initials for avatar fallback
   const getUserInitials = () => {
-    if (!user || !user.email) return "U"
-    return user.email.charAt(0).toUpperCase()
+    if (!user || !user.displayName) return "U"
+    return user.displayName
+      .split(" ")
+      .map((name) => name[0])
+      .join("")
+      .toUpperCase()
+      .substring(0, 2)
   }
 
   return (
@@ -45,16 +51,17 @@ export function DashboardShell({ children }: DashboardShellProps) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                    <span className="text-sm font-medium text-primary-foreground">{getUserInitials()}</span>
-                  </div>
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || "User"} />
+                    <AvatarFallback>{getUserInitials()}</AvatarFallback>
+                  </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuLabel>{user?.displayName || user?.email?.split("@")[0]}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push("/profile")}>Profile</DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogout}>Log out</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push("/profile")}>Hồ sơ</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>Đăng xuất</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

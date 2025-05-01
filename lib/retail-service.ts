@@ -1,8 +1,37 @@
 "use server"
 
-import { executeQuery } from "./db"
-import mysql from "mysql2/promise"
+// import { executeQuery } from "./db"
+// import mysql from "mysql2/promise"
 
+// Mock data for testing
+const mockData = {
+  sales: [],
+  inventory: [],
+  customers: [],
+  imports: [
+    { id: 1, import_type: "sales", record_count: 120, created_at: new Date(), status: "completed" },
+    { id: 2, import_type: "inventory", record_count: 85, created_at: new Date(), status: "completed" },
+    { id: 3, import_type: "customers", record_count: 50, created_at: new Date(), status: "completed" },
+  ],
+  dashboardData: {
+    sales: {
+      total_revenue: 125000,
+      total_orders: 450,
+      average_order_value: 277.78,
+    },
+    inventory: {
+      total_products: 85,
+      low_stock_items: 12,
+      out_of_stock: 3,
+      inventory_value: 45000,
+    },
+    customers: {
+      total_customers: 200,
+    },
+  },
+}
+
+/*
 async function getConnection() {
   if (!process.env.DATABASE_URL) {
     throw new Error("DATABASE_URL environment variable not set.")
@@ -10,10 +39,13 @@ async function getConnection() {
 
   return await mysql.createConnection(process.env.DATABASE_URL)
 }
+*/
 
 // Sales data functions
 export async function saveSalesData(userId: number, salesData: any[]) {
   try {
+    // Comment out database operations
+    /*
     // Begin transaction
     const connection = await getConnection()
     await connection.beginTransaction()
@@ -49,6 +81,21 @@ export async function saveSalesData(userId: number, salesData: any[]) {
       await connection.end()
       throw error
     }
+    */
+
+    // Mock implementation
+    const importId = mockData.imports.length + 1
+    mockData.imports.push({
+      id: importId,
+      import_type: "sales",
+      record_count: salesData.length,
+      created_at: new Date(),
+      status: "completed",
+    })
+
+    mockData.sales = [...mockData.sales, ...salesData]
+
+    return { success: true, importId }
   } catch (error) {
     console.error("Error saving sales data:", error)
     throw new Error("Failed to save sales data")
@@ -58,6 +105,8 @@ export async function saveSalesData(userId: number, salesData: any[]) {
 // Inventory data functions
 export async function saveInventoryData(userId: number, inventoryData: any[]) {
   try {
+    // Comment out database operations
+    /*
     // Begin transaction
     const connection = await getConnection()
     await connection.beginTransaction()
@@ -93,6 +142,21 @@ export async function saveInventoryData(userId: number, inventoryData: any[]) {
       await connection.end()
       throw error
     }
+    */
+
+    // Mock implementation
+    const importId = mockData.imports.length + 1
+    mockData.imports.push({
+      id: importId,
+      import_type: "inventory",
+      record_count: inventoryData.length,
+      created_at: new Date(),
+      status: "completed",
+    })
+
+    mockData.inventory = [...mockData.inventory, ...inventoryData]
+
+    return { success: true, importId }
   } catch (error) {
     console.error("Error saving inventory data:", error)
     throw new Error("Failed to save inventory data")
@@ -102,6 +166,8 @@ export async function saveInventoryData(userId: number, inventoryData: any[]) {
 // Customer data functions
 export async function saveCustomerData(userId: number, customerData: any[]) {
   try {
+    // Comment out database operations
+    /*
     // Begin transaction
     const connection = await getConnection()
     await connection.beginTransaction()
@@ -137,6 +203,21 @@ export async function saveCustomerData(userId: number, customerData: any[]) {
       await connection.end()
       throw error
     }
+    */
+
+    // Mock implementation
+    const importId = mockData.imports.length + 1
+    mockData.imports.push({
+      id: importId,
+      import_type: "customers",
+      record_count: customerData.length,
+      created_at: new Date(),
+      status: "completed",
+    })
+
+    mockData.customers = [...mockData.customers, ...customerData]
+
+    return { success: true, importId }
   } catch (error) {
     console.error("Error saving customer data:", error)
     throw new Error("Failed to save customer data")
@@ -146,6 +227,8 @@ export async function saveCustomerData(userId: number, customerData: any[]) {
 // Get import history
 export async function getImportHistory(userId: number) {
   try {
+    // Comment out database operations
+    /*
     const imports = await executeQuery(
       `SELECT 
         id, import_type, record_count, created_at, status
@@ -154,8 +237,10 @@ export async function getImportHistory(userId: number) {
       ORDER BY created_at DESC`,
       [userId],
     )
+    */
 
-    return imports
+    // Mock implementation
+    return mockData.imports
   } catch (error) {
     console.error("Error getting import history:", error)
     throw new Error("Failed to get import history")
@@ -165,6 +250,8 @@ export async function getImportHistory(userId: number) {
 // Get dashboard data
 export async function getDashboardData(userId: number) {
   try {
+    // Comment out database operations
+    /*
     // Get sales summary
     const salesSummary = await executeQuery(
       `SELECT 
@@ -202,6 +289,10 @@ export async function getDashboardData(userId: number) {
       inventory: Array.isArray(inventorySummary) && inventorySummary.length > 0 ? inventorySummary[0] : null,
       customers: Array.isArray(customerSummary) && customerSummary.length > 0 ? customerSummary[0] : null,
     }
+    */
+
+    // Mock implementation
+    return mockData.dashboardData
   } catch (error) {
     console.error("Error getting dashboard data:", error)
     throw new Error("Failed to get dashboard data")

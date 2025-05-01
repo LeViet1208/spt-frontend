@@ -3,32 +3,21 @@
 import type React from "react"
 
 import { createContext, useContext, useEffect, useState } from "react"
-import {
-  type User,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  sendPasswordResetEmail,
-} from "firebase/auth"
+import { type User, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 
 interface AuthContextType {
   user: User | null
   loading: boolean
-  signUp: (email: string, password: string) => Promise<void>
-  signIn: (email: string, password: string) => Promise<void>
+  signInWithGoogle: () => Promise<any>
   logOut: () => Promise<void>
-  resetPassword: (email: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  signUp: async () => {},
-  signIn: async () => {},
+  signInWithGoogle: async () => {},
   logOut: async () => {},
-  resetPassword: async () => {},
 })
 
 export const useAuth = () => useContext(AuthContext)
@@ -39,6 +28,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log("Auth state changed:", user ? user.email : "No user")
       setUser(user)
       setLoading(false)
     })
@@ -46,29 +36,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => unsubscribe()
   }, [])
 
-  const signUp = async (email: string, password: string) => {
-    await createUserWithEmailAndPassword(auth, email, password)
-  }
+  const signInWithGoogle = async () => {
+    try {
+      console.log("Starting Google sign-in...")
 
-  const signIn = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password)
+      // Tạo mới GoogleAuthProvider
+      const provider = new GoogleAuthProvider()
+
+      // Thêm các scopes
+      provider.addScope("email")
+      provider.addScope("profile")
+
+      // Đặt prompt để luôn hiển thị popup chọn tài khoản
+      provider.setCustomParameters({
+        prompt: "select_account",
+      })
+
+      // Thực hiện đăng nhập với popup
+      const result = await signInWithPopup(auth, provider)
+      console.log("Sign-in successful:", result.user?.email)
+
+      return result
+    } catch (error) {
+      console.error("Google Sign-in Error:", error)
+      throw error
+    }
   }
 
   const logOut = async () => {
-    await signOut(auth)
-  }
-
-  const resetPassword = async (email: string) => {
-    await sendPasswordResetEmail(auth, email)
+    try {
+      await signOut(auth)
+    } catch (error) {
+      console.error("Error signing out:", error)
+      throw error
+    }
   }
 
   const value = {
     user,
     loading,
-    signUp,
-    signIn,
+    signInWithGoogle,
     logOut,
-    resetPassword,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
