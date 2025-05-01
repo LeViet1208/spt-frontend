@@ -1,10 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { BarChart3, ShoppingCart, Package, Users, Upload, Settings } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { ShoppingCart, LayoutDashboard, LineChart, Package, Users, Upload, Settings } from "lucide-react"
 import type { DashboardPage } from "./dashboard"
 
 interface DashboardSidebarProps {
@@ -13,37 +12,46 @@ interface DashboardSidebarProps {
 }
 
 export function DashboardSidebar({ currentPage, setCurrentPage }: DashboardSidebarProps) {
-  const router = useRouter()
+  const { logOut } = useAuth()
+
+  const handleLogout = async () => {
+    try {
+      await logOut()
+      // Chuyển hướng sẽ được xử lý bởi middleware
+    } catch (error) {
+      console.error("Error logging out:", error)
+    }
+  }
 
   return (
-    <div className="flex h-screen w-[240px] flex-col border-r bg-muted/40">
+    <div className="flex h-screen w-64 flex-col border-r bg-muted/40">
       <div className="flex h-14 items-center border-b px-4">
-        <Link href="/" className="flex items-center gap-2 font-semibold">
+        <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
           <ShoppingCart className="h-6 w-6" />
           <span>RetailAnalytics</span>
         </Link>
       </div>
-      <ScrollArea className="flex-1 px-2 py-2">
-        <div className="space-y-1">
+      <div className="flex-1 overflow-auto py-2">
+        <nav className="grid gap-1 px-2">
           <Button
             variant={currentPage === "overview" ? "secondary" : "ghost"}
-            className="w-full justify-start"
+            className="justify-start"
             onClick={() => setCurrentPage("overview")}
           >
-            <BarChart3 className="mr-2 h-4 w-4" />
+            <LayoutDashboard className="mr-2 h-4 w-4" />
             Tổng quan
           </Button>
           <Button
             variant={currentPage === "sales" ? "secondary" : "ghost"}
-            className="w-full justify-start"
+            className="justify-start"
             onClick={() => setCurrentPage("sales")}
           >
-            <ShoppingCart className="mr-2 h-4 w-4" />
+            <LineChart className="mr-2 h-4 w-4" />
             Doanh số
           </Button>
           <Button
             variant={currentPage === "inventory" ? "secondary" : "ghost"}
-            className="w-full justify-start"
+            className="justify-start"
             onClick={() => setCurrentPage("inventory")}
           >
             <Package className="mr-2 h-4 w-4" />
@@ -51,7 +59,7 @@ export function DashboardSidebar({ currentPage, setCurrentPage }: DashboardSideb
           </Button>
           <Button
             variant={currentPage === "customers" ? "secondary" : "ghost"}
-            className="w-full justify-start"
+            className="justify-start"
             onClick={() => setCurrentPage("customers")}
           >
             <Users className="mr-2 h-4 w-4" />
@@ -59,7 +67,7 @@ export function DashboardSidebar({ currentPage, setCurrentPage }: DashboardSideb
           </Button>
           <Button
             variant={currentPage === "import" ? "secondary" : "ghost"}
-            className="w-full justify-start"
+            className="justify-start"
             onClick={() => setCurrentPage("import")}
           >
             <Upload className="mr-2 h-4 w-4" />
@@ -67,14 +75,19 @@ export function DashboardSidebar({ currentPage, setCurrentPage }: DashboardSideb
           </Button>
           <Button
             variant={currentPage === "settings" ? "secondary" : "ghost"}
-            className="w-full justify-start"
+            className="justify-start"
             onClick={() => setCurrentPage("settings")}
           >
             <Settings className="mr-2 h-4 w-4" />
             Cài đặt tài khoản
           </Button>
-        </div>
-      </ScrollArea>
+        </nav>
+      </div>
+      <div className="border-t p-4">
+        <Button variant="outline" className="w-full justify-start" onClick={handleLogout}>
+          Đăng xuất
+        </Button>
+      </div>
     </div>
   )
 }

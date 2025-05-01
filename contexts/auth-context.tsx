@@ -23,17 +23,21 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext)
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  // Sử dụng null làm giá trị khởi tạo để tránh hydration mismatch
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      console.log("Auth state changed:", user ? user.email : "No user")
-      setUser(user)
-      setLoading(false)
-    })
+    // Chỉ chạy ở phía client
+    if (typeof window !== "undefined") {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        console.log("Auth state changed:", user ? user.email : "No user")
+        setUser(user)
+        setLoading(false)
+      })
 
-    return () => unsubscribe()
+      return () => unsubscribe()
+    }
   }, [])
 
   const signInWithGoogle = async () => {

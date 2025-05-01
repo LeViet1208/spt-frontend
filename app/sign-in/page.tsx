@@ -11,16 +11,18 @@ import { ShoppingCart } from "lucide-react"
 export default function SignIn() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
-  const { user, signInWithGoogle } = useAuth()
+  const { user, loading: authLoading, signInWithGoogle } = useAuth()
   const router = useRouter()
 
   // Kiểm tra nếu người dùng đã đăng nhập, chuyển hướng đến dashboard
   useEffect(() => {
-    if (user) {
+    // Chỉ chuyển hướng khi đã load xong auth state và user tồn tại
+    if (!authLoading && user) {
       console.log("User detected in useEffect, redirecting to dashboard...")
-      router.push("/dashboard") // Đã sửa từ "/" thành "/dashboard"
+      // Sử dụng window.location để tránh vấn đề với Next.js router
+      window.location.href = "/dashboard"
     }
-  }, [user, router])
+  }, [user, authLoading, router])
 
   const handleGoogleSignIn = async () => {
     console.log("Sign-in button clicked")
@@ -29,7 +31,7 @@ export default function SignIn() {
 
     try {
       await signInWithGoogle()
-      // Không cần chuyển hướng ở đây, useEffect sẽ xử lý
+      // useEffect sẽ xử lý chuyển hướng
     } catch (error: any) {
       console.error("Error in handleGoogleSignIn:", error)
       setError(error.message || "Không thể đăng nhập với Google")

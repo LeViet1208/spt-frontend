@@ -1,4 +1,6 @@
-import { initializeApp } from "firebase/app"
+
+import { initializeApp } from "firebase/app";
+import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "firebase/auth";
 import { getAuth } from "firebase/auth"
 
 const firebaseConfig = {
@@ -11,13 +13,14 @@ const firebaseConfig = {
   databaseURL: "https://spt-ml-model-service-default-rtdb.asia-southeast1.firebasedatabase.app/",
 }
 
-// Khởi tạo Firebase
-const app = initializeApp(firebaseConfig)
+// Kiểm tra xem Firebase đã được khởi tạo chưa để tránh khởi tạo nhiều lần
+let app
+try {
+  app = initializeApp(firebaseConfig)
+} catch (error) {
+  // Nếu Firebase đã được khởi tạo, sử dụng instance hiện có
+  console.log("Firebase app already initialized")
+}
 
-// Khởi tạo Auth
 export const auth = getAuth(app)
-
-// Không cần export googleProvider từ đây nữa
-// export const googleProvider = new GoogleAuthProvider()
-
 export default app
