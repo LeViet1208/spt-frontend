@@ -44,19 +44,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log("Starting Google sign-in...")
 
-      // Tạo mới GoogleAuthProvider
       const provider = new GoogleAuthProvider()
-
-      // Thêm các scopes
       provider.addScope("email")
       provider.addScope("profile")
-
-      // Đặt prompt để luôn hiển thị popup chọn tài khoản
       provider.setCustomParameters({
         prompt: "select_account",
       })
 
-      // Thực hiện đăng nhập với popup
       const result = await signInWithPopup(auth, provider)
       console.log("Sign-in successful:", result.user?.email)
 

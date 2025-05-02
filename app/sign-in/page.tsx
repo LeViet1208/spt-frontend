@@ -1,5 +1,6 @@
 "use client"
 
+import Cookies from "js-cookie"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
@@ -34,6 +35,7 @@ export default function SignIn() {
     try {
       await signInWithGoogle()
       // useEffect sẽ xử lý chuyển hướng
+      document.cookie = "session=fake-session-token; path=/; max-age=86400"
       router.push("/dashboard")
     } catch (error: any) {
       console.error("Error in handleGoogleSignIn:", error)
