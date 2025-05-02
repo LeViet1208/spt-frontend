@@ -12,17 +12,19 @@ export default function SignIn() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const { user, loading: authLoading, signInWithGoogle } = useAuth()
+  const [didRedirect, setDidRedirect] = useState(false)
   const router = useRouter()
 
   // Kiểm tra nếu người dùng đã đăng nhập, chuyển hướng đến dashboard
-  useEffect(() => {
-    // Chỉ chuyển hướng khi đã load xong auth state và user tồn tại
-    if (!authLoading && user) {
-      console.log("User detected in useEffect, redirecting to dashboard...")
-      // Sử dụng window.location để tránh vấn đề với Next.js router
-      window.location.href = "/dashboard"
-    }
-  }, [user, authLoading, router])
+  // useEffect(() => {
+  //   // Chỉ chuyển hướng khi đã load xong auth state và user tồn tại
+  //   if (!authLoading && user && !didRedirect) {
+  //     console.log("User detected in useEffect, redirecting to dashboard...")
+  //     setDidRedirect(true)
+  //     // Sử dụng window.location để tránh vấn đề với Next.js router
+  //     window.location.href = "/dashboard"
+  //   }
+  // }, [user, authLoading, router])
 
   const handleGoogleSignIn = async () => {
     console.log("Sign-in button clicked")
@@ -32,6 +34,7 @@ export default function SignIn() {
     try {
       await signInWithGoogle()
       // useEffect sẽ xử lý chuyển hướng
+      router.push("/dashboard")
     } catch (error: any) {
       console.error("Error in handleGoogleSignIn:", error)
       setError(error.message || "Không thể đăng nhập với Google")
