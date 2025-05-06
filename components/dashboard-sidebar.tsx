@@ -1,6 +1,8 @@
 "use client"
 
+import Cookies from "js-cookie"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { ShoppingCart, LayoutDashboard, LineChart, Package, Users, Upload, Settings } from "lucide-react"
@@ -13,10 +15,13 @@ interface DashboardSidebarProps {
 
 export function DashboardSidebar({ currentPage, setCurrentPage }: DashboardSidebarProps) {
   const { logOut } = useAuth()
+  const router = useRouter()
 
   const handleLogout = async () => {
     try {
       await logOut()
+      Cookies.remove("session")
+      router.push("/sign-in?logout=true")
       // Chuyển hướng sẽ được xử lý bởi middleware
     } catch (error) {
       console.error("Error logging out:", error)

@@ -54,6 +54,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const result = await signInWithPopup(auth, provider)
       console.log("Sign-in successful:", result.user?.email)
 
+      sessionStorage.setItem("user", JSON.stringify(result.user))
       return result
     } catch (error) {
       console.error("Google Sign-in Error:", error)
@@ -64,6 +65,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const logOut = async () => {
     try {
       await signOut(auth)
+      sessionStorage.removeItem("user")
     } catch (error) {
       console.error("Error signing out:", error)
       throw error

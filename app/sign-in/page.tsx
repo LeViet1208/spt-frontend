@@ -35,7 +35,15 @@ export default function SignIn() {
     try {
       await signInWithGoogle()
       // useEffect sẽ xử lý chuyển hướng
-      document.cookie = "session=fake-session-token; path=/; max-age=86400"
+      const sessionToken = "real-session-token"
+      const res = await fetch("/api/set-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionToken }),
+      })
+      if (!res.ok) {
+        throw new Error("Không thể set session từ server")
+      }
       router.push("/dashboard")
     } catch (error: any) {
       console.error("Error in handleGoogleSignIn:", error)
