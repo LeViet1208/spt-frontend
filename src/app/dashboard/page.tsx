@@ -21,6 +21,7 @@ import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useDatasets } from "@/hooks/use-datasets"
 import CampaignPopup from "@/components/campaign-popup"
+import type { Campaign } from "@/lib/api/campaign"
 
 export default function DashboardPage() {
   const { user, logOut } = useAuth()
@@ -30,6 +31,11 @@ export default function DashboardPage() {
   const [showCampaignPopup, setShowCampaignPopup] = useState<number | null>(null)
   const router = useRouter()
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Thay thế phần state declarations
+  const [allCampaigns, setAllCampaigns] = useState<Campaign[]>([])
+  const [campaignLoading, setCampaignLoading] = useState(false)
+  const [campaignError, setCampaignError] = useState<string | null>(null)
 
   // Use the datasets hook
   const { datasets, loading, error, refreshDatasets } = useDatasets()
@@ -57,6 +63,124 @@ export default function DashboardPage() {
 
   const handleRefresh = () => {
     refreshDatasets()
+  }
+
+  const handleVisualizeCampaign = (campaignId: number) => {
+    console.log("Visualize campaign:", campaignId)
+    // Will implement later
+  }
+
+  const fetchAllCampaigns = async () => {
+    try {
+      setCampaignLoading(true)
+      setCampaignError(null)
+
+      const mockAllCampaigns: Campaign[] = [
+        {
+          id: 1,
+          name: "Summer Sale 2024",
+          status: "active",
+          promotionType: "discount",
+          datasetId: 1,
+          startDate: "2024-06-01",
+          endDate: "2024-08-31",
+          description: "20% off on all summer products",
+          createdAt: "2024-05-15T10:30:00Z",
+          updatedAt: "2024-05-15T10:30:00Z",
+        },
+        {
+          id: 2,
+          name: "Back to School",
+          status: "draft",
+          promotionType: "bogo",
+          datasetId: 1,
+          startDate: "2024-08-15",
+          endDate: "2024-09-15",
+          description: "Buy one get one free on school supplies",
+          createdAt: "2024-05-20T14:20:00Z",
+          updatedAt: "2024-05-20T14:20:00Z",
+        },
+        {
+          id: 3,
+          name: "Holiday Bundle",
+          status: "completed",
+          promotionType: "bundle",
+          datasetId: 2,
+          startDate: "2023-12-01",
+          endDate: "2023-12-31",
+          description: "Special holiday product bundles",
+          createdAt: "2023-11-15T09:00:00Z",
+          updatedAt: "2023-12-31T23:59:00Z",
+        },
+        {
+          id: 4,
+          name: "Flash Weekend Sale",
+          status: "paused",
+          promotionType: "discount",
+          datasetId: 2,
+          startDate: "2024-03-01",
+          endDate: "2024-03-03",
+          description: "48-hour flash sale with deep discounts",
+          createdAt: "2024-02-25T16:45:00Z",
+          updatedAt: "2024-03-02T12:00:00Z",
+        },
+        {
+          id: 5,
+          name: "Spring Collection Launch",
+          status: "active",
+          promotionType: "seasonal",
+          datasetId: 3,
+          startDate: "2024-03-20",
+          endDate: "2024-05-20",
+          description: "Introducing new spring collection with special offers",
+          createdAt: "2024-03-10T11:30:00Z",
+          updatedAt: "2024-03-20T08:00:00Z",
+        },
+        {
+          id: 6,
+          name: "Customer Loyalty Rewards",
+          status: "active",
+          promotionType: "discount",
+          datasetId: 3,
+          startDate: "2024-01-01",
+          endDate: "2024-12-31",
+          description: "Year-long loyalty program with tiered discounts",
+          createdAt: "2023-12-20T10:00:00Z",
+          updatedAt: "2024-01-01T00:00:00Z",
+        },
+        {
+          id: 7,
+          name: "Black Friday Mega Sale",
+          status: "draft",
+          promotionType: "discount",
+          datasetId: 1,
+          startDate: "2024-11-29",
+          endDate: "2024-11-29",
+          description: "Biggest sale of the year",
+          createdAt: "2024-10-15T10:00:00Z",
+          updatedAt: "2024-10-15T10:00:00Z",
+        },
+        {
+          id: 8,
+          name: "New Year Bundle Deals",
+          status: "completed",
+          promotionType: "bundle",
+          datasetId: 2,
+          startDate: "2024-01-01",
+          endDate: "2024-01-07",
+          description: "Start the year with amazing bundle deals",
+          createdAt: "2023-12-15T10:00:00Z",
+          updatedAt: "2024-01-07T23:59:00Z",
+        },
+      ]
+
+      setAllCampaigns(mockAllCampaigns)
+    } catch (err) {
+      setCampaignError("Failed to fetch campaigns")
+      console.error("Error fetching campaigns:", err)
+    } finally {
+      setCampaignLoading(false)
+    }
   }
 
   // Handle dataset hover with delay
@@ -110,6 +234,13 @@ export default function DashboardPage() {
       }
     }
   }, [])
+
+  // Thêm useEffect để fetch campaigns khi tab campaign được chọn
+  useEffect(() => {
+    if (activeTab === "campaign") {
+      fetchAllCampaigns()
+    }
+  }, [activeTab])
 
   const tabs = [
     { id: "dataset", label: "Dataset", icon: Database },
@@ -170,6 +301,36 @@ export default function DashboardPage() {
             <span className="text-xs">Analyzed</span>
           </div>
         )
+    }
+  }
+
+  const getStatusColor = (status: Campaign["status"]) => {
+    switch (status) {
+      case "active":
+        return "bg-green-100 text-green-800"
+      case "draft":
+        return "bg-gray-100 text-gray-800"
+      case "paused":
+        return "bg-yellow-100 text-yellow-800"
+      case "completed":
+        return "bg-blue-100 text-blue-800"
+      default:
+        return "bg-gray-100 text-gray-800"
+    }
+  }
+
+  const getPromotionTypeIcon = (type: Campaign["promotionType"]) => {
+    switch (type) {
+      case "discount":
+        return "💰"
+      case "bogo":
+        return "🎁"
+      case "bundle":
+        return "📦"
+      case "seasonal":
+        return "🌟"
+      default:
+        return "🏷️"
     }
   }
 
@@ -394,9 +555,92 @@ export default function DashboardPage() {
           )}
 
           {activeTab === "campaign" && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Campaign Management</h2>
-              <p className="text-gray-600">Create and manage your promotion campaigns.</p>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              {/* Campaign Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <div className="flex items-center gap-4">
+                  <h2 className="text-2xl font-bold text-gray-900">Campaign Management</h2>
+                  <button
+                    onClick={handleRefresh}
+                    disabled={loading}
+                    className="w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50"
+                    title="Refresh campaigns"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                  </button>
+                </div>
+                <button
+                  onClick={() => router.push("/campaign/new")}
+                  className="w-10 h-10 bg-gray-900 hover:bg-gray-800 text-white rounded-full flex items-center justify-center transition-colors shadow-sm hover:shadow-md"
+                  title="Add Campaign"
+                >
+                  <Plus className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Campaign List */}
+              <div className="divide-y divide-gray-200">
+                {loading ? (
+                  <div className="p-8 text-center">
+                    <RefreshCw className="h-8 w-8 mx-auto mb-4 text-gray-400 animate-spin" />
+                    <p className="text-gray-500">Loading campaigns...</p>
+                  </div>
+                ) : error ? (
+                  <div className="p-8 text-center text-red-600">
+                    <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-400" />
+                    <p className="text-lg font-medium mb-2">Error loading campaigns</p>
+                    <p className="text-sm mb-4">{error}</p>
+                    <button
+                      onClick={handleRefresh}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                ) : allCampaigns.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500">
+                    <Megaphone className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                    <p className="text-lg font-medium mb-2">No campaigns found</p>
+                    <p className="text-sm">Get started by creating your first campaign</p>
+                  </div>
+                ) : (
+                  allCampaigns.map((campaign) => (
+                    <div
+                      key={campaign.id}
+                      className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                    >
+                      {/* Campaign Name and Info */}
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <span className="text-lg">{getPromotionTypeIcon(campaign.promotionType)}</span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium text-gray-900">{campaign.name}</span>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-1 text-xs rounded-md ${getStatusColor(campaign.status)}`}>
+                              {campaign.status}
+                            </span>
+                            <span className="px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded-md capitalize">
+                              {campaign.promotionType}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Visualize Icon */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleVisualizeCampaign(campaign.id)}
+                          className="w-8 h-8 bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-lg flex items-center justify-center transition-colors"
+                          title="Visualize Campaign"
+                        >
+                          <BarChart className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           )}
 

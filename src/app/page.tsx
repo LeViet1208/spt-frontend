@@ -59,10 +59,18 @@ export default function LandingPage() {
           {/* Hero Section */}
           <div className="text-center mb-16">
             <h1 className="text-4xl md:text-6xl font-bold mb-6 text-gray-900">SPT - Best analyze tool for retailer</h1>
-            <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed mb-8">
               Our website allows users to easily upload their data and perform comprehensive analysis with powerful
               tools.
             </p>
+
+            {/* Thêm hero description mới */}
+            <div className="max-w-4xl mx-auto mb-12">
+              <p className="text-base md:text-lg text-gray-700 leading-relaxed font-medium bg-gray-50 px-8 py-6 rounded-2xl border border-gray-100">
+                A powerful platform for retailers to truly understand the impact of each promotion – from sales uplift
+                to changes in customer behavior – enabling smarter decisions and optimized marketing investments.
+              </p>
+            </div>
           </div>
 
           {/* Horizontal Scrolling Features */}
