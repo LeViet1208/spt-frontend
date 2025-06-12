@@ -22,6 +22,7 @@ import { useRouter } from "next/navigation"
 import { useDatasets } from "@/hooks/use-datasets"
 import CampaignPopup from "@/components/campaign-popup"
 import type { Campaign } from "@/lib/api/campaign"
+import { campaignAPI } from "@/lib/api/campaign"
 
 export default function DashboardPage() {
   const { user, logOut } = useAuth()
@@ -32,7 +33,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Thay thế phần state declarations
+  // Campaign state
   const [allCampaigns, setAllCampaigns] = useState<Campaign[]>([])
   const [campaignLoading, setCampaignLoading] = useState(false)
   const [campaignError, setCampaignError] = useState<string | null>(null)
@@ -43,6 +44,7 @@ export default function DashboardPage() {
   const handleLogout = async () => {
     try {
       await logOut()
+      router.push("/")
     } catch (error) {
       console.error("Logout failed:", error)
     }
@@ -54,7 +56,7 @@ export default function DashboardPage() {
 
   const handleVisualizeData = (datasetId: number) => {
     console.log("Visualize dataset:", datasetId)
-    // Will implement later
+    // TODO: Implement data visualization
   }
 
   const handleCreateCampaign = (datasetId: number) => {
@@ -62,12 +64,16 @@ export default function DashboardPage() {
   }
 
   const handleRefresh = () => {
-    refreshDatasets()
+    if (activeTab === "dataset") {
+      refreshDatasets()
+    } else if (activeTab === "campaign") {
+      fetchAllCampaigns()
+    }
   }
 
   const handleVisualizeCampaign = (campaignId: number) => {
     console.log("Visualize campaign:", campaignId)
-    // Will implement later
+    // TODO: Implement campaign visualization
   }
 
   const fetchAllCampaigns = async () => {
@@ -75,108 +81,15 @@ export default function DashboardPage() {
       setCampaignLoading(true)
       setCampaignError(null)
 
-      const mockAllCampaigns: Campaign[] = [
-        {
-          id: 1,
-          name: "Summer Sale 2024",
-          status: "active",
-          promotionType: "discount",
-          datasetId: 1,
-          startDate: "2024-06-01",
-          endDate: "2024-08-31",
-          description: "20% off on all summer products",
-          createdAt: "2024-05-15T10:30:00Z",
-          updatedAt: "2024-05-15T10:30:00Z",
-        },
-        {
-          id: 2,
-          name: "Back to School",
-          status: "draft",
-          promotionType: "bogo",
-          datasetId: 1,
-          startDate: "2024-08-15",
-          endDate: "2024-09-15",
-          description: "Buy one get one free on school supplies",
-          createdAt: "2024-05-20T14:20:00Z",
-          updatedAt: "2024-05-20T14:20:00Z",
-        },
-        {
-          id: 3,
-          name: "Holiday Bundle",
-          status: "completed",
-          promotionType: "bundle",
-          datasetId: 2,
-          startDate: "2023-12-01",
-          endDate: "2023-12-31",
-          description: "Special holiday product bundles",
-          createdAt: "2023-11-15T09:00:00Z",
-          updatedAt: "2023-12-31T23:59:00Z",
-        },
-        {
-          id: 4,
-          name: "Flash Weekend Sale",
-          status: "paused",
-          promotionType: "discount",
-          datasetId: 2,
-          startDate: "2024-03-01",
-          endDate: "2024-03-03",
-          description: "48-hour flash sale with deep discounts",
-          createdAt: "2024-02-25T16:45:00Z",
-          updatedAt: "2024-03-02T12:00:00Z",
-        },
-        {
-          id: 5,
-          name: "Spring Collection Launch",
-          status: "active",
-          promotionType: "seasonal",
-          datasetId: 3,
-          startDate: "2024-03-20",
-          endDate: "2024-05-20",
-          description: "Introducing new spring collection with special offers",
-          createdAt: "2024-03-10T11:30:00Z",
-          updatedAt: "2024-03-20T08:00:00Z",
-        },
-        {
-          id: 6,
-          name: "Customer Loyalty Rewards",
-          status: "active",
-          promotionType: "discount",
-          datasetId: 3,
-          startDate: "2024-01-01",
-          endDate: "2024-12-31",
-          description: "Year-long loyalty program with tiered discounts",
-          createdAt: "2023-12-20T10:00:00Z",
-          updatedAt: "2024-01-01T00:00:00Z",
-        },
-        {
-          id: 7,
-          name: "Black Friday Mega Sale",
-          status: "draft",
-          promotionType: "discount",
-          datasetId: 1,
-          startDate: "2024-11-29",
-          endDate: "2024-11-29",
-          description: "Biggest sale of the year",
-          createdAt: "2024-10-15T10:00:00Z",
-          updatedAt: "2024-10-15T10:00:00Z",
-        },
-        {
-          id: 8,
-          name: "New Year Bundle Deals",
-          status: "completed",
-          promotionType: "bundle",
-          datasetId: 2,
-          startDate: "2024-01-01",
-          endDate: "2024-01-07",
-          description: "Start the year with amazing bundle deals",
-          createdAt: "2023-12-15T10:00:00Z",
-          updatedAt: "2024-01-07T23:59:00Z",
-        },
-      ]
+      const response = await campaignAPI.getAllCampaigns()
 
-      setAllCampaigns(mockAllCampaigns)
+      if (response.success && response.data) {
+        setAllCampaigns(response.data)
+      } else {
+        setCampaignError(response.error || "Failed to fetch campaigns")
+      }
     } catch (err) {
-      setCampaignError("Failed to fetch campaigns")
+      setCampaignError("An unexpected error occurred")
       console.error("Error fetching campaigns:", err)
     } finally {
       setCampaignLoading(false)
@@ -198,9 +111,6 @@ export default function DashboardPage() {
     }, 2000)
   }
 
-  // Sửa lại phần xử lý mouse events để popup không biến mất khi hover vào
-
-  // Thay đổi hàm handleDatasetMouseLeave
   const handleDatasetMouseLeave = () => {
     setHoveredDataset(null)
 
@@ -209,21 +119,6 @@ export default function DashboardPage() {
       clearTimeout(hoverTimeoutRef.current)
       hoverTimeoutRef.current = null
     }
-
-    // KHÔNG tự động ẩn popup khi rời khỏi dataset row
-    // Chỉ ẩn khi người dùng rời khỏi cả popup
-  }
-
-  const handlePopupMouseEnter = () => {
-    // Keep popup visible when hovering over it
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current)
-    }
-  }
-
-  const handlePopupMouseLeave = () => {
-    // Hide popup when leaving popup area
-    setShowCampaignPopup(null)
   }
 
   // Clean up timeout on unmount
@@ -235,7 +130,7 @@ export default function DashboardPage() {
     }
   }, [])
 
-  // Thêm useEffect để fetch campaigns khi tab campaign được chọn
+  // Fetch campaigns when campaign tab is selected
   useEffect(() => {
     if (activeTab === "campaign") {
       fetchAllCampaigns()
@@ -460,7 +355,13 @@ export default function DashboardPage() {
                   <div className="p-8 text-center text-gray-500">
                     <Database className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                     <p className="text-lg font-medium mb-2">No datasets found</p>
-                    <p className="text-sm">Get started by adding your first dataset</p>
+                    <p className="text-sm mb-4">Get started by adding your first dataset</p>
+                    <button
+                      onClick={handleAddDataset}
+                      className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
+                    >
+                      Add Dataset
+                    </button>
                   </div>
                 ) : (
                   datasets.map((dataset) => (
@@ -468,14 +369,7 @@ export default function DashboardPage() {
                       key={dataset.id}
                       className="relative"
                       onMouseEnter={() => handleDatasetMouseEnter(dataset.id)}
-                      onMouseLeave={() => {
-                        // Chỉ xóa trạng thái hover, không ẩn popup
-                        setHoveredDataset(null)
-                        if (hoverTimeoutRef.current) {
-                          clearTimeout(hoverTimeoutRef.current)
-                          hoverTimeoutRef.current = null
-                        }
-                      }}
+                      onMouseLeave={handleDatasetMouseLeave}
                     >
                       {/* Dataset Row */}
                       <div className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors cursor-pointer">
@@ -529,14 +423,12 @@ export default function DashboardPage() {
                       {showCampaignPopup === dataset.id && (
                         <div
                           onMouseEnter={() => {
-                            // Khi di chuột vào popup, giữ popup hiển thị
                             if (hoverTimeoutRef.current) {
                               clearTimeout(hoverTimeoutRef.current)
                               hoverTimeoutRef.current = null
                             }
                           }}
                           onMouseLeave={() => {
-                            // Khi di chuột ra khỏi popup, ẩn popup
                             setShowCampaignPopup(null)
                           }}
                         >
@@ -562,11 +454,11 @@ export default function DashboardPage() {
                   <h2 className="text-2xl font-bold text-gray-900">Campaign Management</h2>
                   <button
                     onClick={handleRefresh}
-                    disabled={loading}
+                    disabled={campaignLoading}
                     className="w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50"
                     title="Refresh campaigns"
                   >
-                    <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                    <RefreshCw className={`h-4 w-4 ${campaignLoading ? "animate-spin" : ""}`} />
                   </button>
                 </div>
                 <button
@@ -580,16 +472,16 @@ export default function DashboardPage() {
 
               {/* Campaign List */}
               <div className="divide-y divide-gray-200">
-                {loading ? (
+                {campaignLoading ? (
                   <div className="p-8 text-center">
                     <RefreshCw className="h-8 w-8 mx-auto mb-4 text-gray-400 animate-spin" />
                     <p className="text-gray-500">Loading campaigns...</p>
                   </div>
-                ) : error ? (
+                ) : campaignError ? (
                   <div className="p-8 text-center text-red-600">
                     <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-400" />
                     <p className="text-lg font-medium mb-2">Error loading campaigns</p>
-                    <p className="text-sm mb-4">{error}</p>
+                    <p className="text-sm mb-4">{campaignError}</p>
                     <button
                       onClick={handleRefresh}
                       className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
@@ -601,7 +493,13 @@ export default function DashboardPage() {
                   <div className="p-8 text-center text-gray-500">
                     <Megaphone className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                     <p className="text-lg font-medium mb-2">No campaigns found</p>
-                    <p className="text-sm">Get started by creating your first campaign</p>
+                    <p className="text-sm mb-4">Get started by creating your first campaign</p>
+                    <button
+                      onClick={() => router.push("/campaign/new")}
+                      className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
+                    >
+                      Create Campaign
+                    </button>
                   </div>
                 ) : (
                   allCampaigns.map((campaign) => (

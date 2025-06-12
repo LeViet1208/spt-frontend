@@ -1,39 +1,60 @@
 "use client"
 
-import { BarChart3 } from "lucide-react"
+import { BarChart3, AlertTriangle } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
 
 export default function SignInPage() {
-  const { signInWithGoogle, user, loading } = useAuth()
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
+  const { user, loading: authLoading, signInWithGoogle } = useAuth()
+  const [didRedirect, setDidRedirect] = useState(false)
   const router = useRouter()
-  const [isSigningIn, setIsSigningIn] = useState(false)
 
   useEffect(() => {
-    if (user && !loading) {
+    if (user && !authLoading) {
+      console.log("User authenticated, redirecting to dashboard...")
       router.push("/dashboard")
     }
-  }, [user, loading, router])
+  }, [user, authLoading, router])
 
   const handleGoogleSignIn = async () => {
+    console.log("Sign-in button clicked")
+    setError("")
+    setLoading(true)
+
     try {
-      setIsSigningIn(true)
       await signInWithGoogle()
+      // useEffect sẽ xử lý chuyển hướng
+      const sessionToken = "real-session-token"
+      const res = await fetch("/api/set-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionToken }),
+      })
+      if (!res.ok) {
+        throw new Error("Không thể set session từ server")
+      }
       router.push("/dashboard")
-    } catch (error) {
-      console.error("Sign-in failed:", error)
-      setIsSigningIn(false)
+    } catch (error: any) {
+      console.error("Error in handleGoogleSignIn:", error)
+      setError(error.message || "Không thể đăng nhập với Google")
+    } finally {
+      setLoading(false)
     }
   }
 
-  // if (loading) {
-  //   return (
-  //     <div className="min-h-screen flex items-center justify-center">
-  //       <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
-  //     </div>
-  //   )
-  // }
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen flex">
@@ -108,13 +129,26 @@ export default function SignInPage() {
             <p className="text-gray-600">Sign in to access your analytics dashboard</p>
           </div>
 
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-red-800 mb-1">Sign-in Error</p>
+                  <p className="text-sm text-red-600">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Google Sign In Button */}
           <button
             onClick={handleGoogleSignIn}
-            disabled={isSigningIn}
+            disabled={loading}
             className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-200 rounded-lg px-6 py-4 text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSigningIn ? (
+            {loading ? (
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-700"></div>
             ) : (
               <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -136,7 +170,7 @@ export default function SignInPage() {
                 />
               </svg>
             )}
-            {isSigningIn ? "Signing in..." : "Continue with Google"}
+            {loading ? "Signing in..." : "Continue with Google"}
           </button>
 
           {/* Terms */}
