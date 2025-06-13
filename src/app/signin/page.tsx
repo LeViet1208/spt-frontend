@@ -25,17 +25,49 @@ export default function SignInPage() {
     setLoading(true)
 
     try {
-      await signInWithGoogle()
-      // useEffect sẽ xử lý chuyển hướng
-      const sessionToken = "real-session-token"
-      const res = await fetch("/api/set-session", {
+      const result = await signInWithGoogle()
+
+      // Lấy Firebase ID token
+      const idToken = result.idToken
+      console.log("Firebase ID Token:", idToken)
+
+      // Gửi ID token đến backend endpoint
+      console.log("Sending ID token to backend...")
+      const authResponse = await fetch("http://localhost:8000/auth", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionToken }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firebase_id_token: idToken
+        }),
       })
-      if (!res.ok) {
-        throw new Error("Không thể set session từ server")
+
+      if (!authResponse.ok) {
+        throw new Error(`Backend authentication failed: ${authResponse.status}`)
       }
+
+      const { access_token, user_id } = await authResponse.json()
+
+      localStorage.setItem("access_token", access_token)
+      localStorage.setItem("user_id", user_id)
+      
+      console.log("Backend authentication successful:", access_token, user_id)
+
+      // // Gửi ID token đến internal API để tạo session
+      // const sessionResponse = await fetch("/api/set-session", {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({ sessionToken: idToken }),
+      // })
+
+      // if (!sessionResponse.ok) {
+      //   throw new Error("Không thể set session từ server")
+      // }
+
+      // const sessionData = await sessionResponse.json()
+      // console.log("Session set successfully:", sessionData)
+
       router.push("/dashboard")
     } catch (error: any) {
       console.error("Error in handleGoogleSignIn:", error)

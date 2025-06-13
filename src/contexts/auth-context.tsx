@@ -11,6 +11,7 @@ interface AuthContextType {
   loading: boolean
   signInWithGoogle: () => Promise<any>
   logOut: () => Promise<void>
+  getIdToken: () => Promise<string | null>
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -18,6 +19,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   signInWithGoogle: async () => {},
   logOut: async () => {},
+  getIdToken: async () => null,
 })
 
 export const useAuth = () => useContext(AuthContext)
@@ -54,11 +56,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const result = await signInWithPopup(auth, provider)
       console.log("Sign-in successful:", result.user?.email)
 
+      // Lấy ID token
+      const idToken = await result.user.getIdToken()
+      console.log("ID Token:", idToken)
+
+      // Lưu user info và ID token
       sessionStorage.setItem("user", JSON.stringify(result.user))
-      return result
+      sessionStorage.setItem("idToken", idToken)
+
+      return { ...result, idToken }
     } catch (error) {
       console.error("Google Sign-in Error:", error)
       throw error
+    }
+  }
+
+  const getIdToken = async (): Promise<string | null> => {
+    try {
+      if (user) {
+        const idToken = await user.getIdToken()
+        return idToken
+      }
+      return null
+    } catch (error) {
+      console.error("Error getting ID token:", error)
+      return null
     }
   }
 
@@ -66,6 +88,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await signOut(auth)
       sessionStorage.removeItem("user")
+      sessionStorage.removeItem("idToken")
     } catch (error) {
       console.error("Error signing out:", error)
       throw error
@@ -77,6 +100,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     loading,
     signInWithGoogle,
     logOut,
+    getIdToken,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -6,6 +6,7 @@ import { BarChart3, ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, Chevr
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useDatasets, type CreateDatasetProgress } from "@/hooks/use-datasets"
+import { auth } from "firebase-admin"
 
 // Define file requirements
 const fileRequirements = [
@@ -14,15 +15,15 @@ const fileRequirements = [
     name: "Transaction Data",
     description: "Contains all sales transactions with product and store information",
     requiredColumns: [
-      "transaction_id",
-      "date",
-      "store_id",
       "product_id",
-      "quantity",
-      "unit_price",
-      "total_price",
-      "discount",
-      "customer_id",
+      "price",
+      "time_of_transaction",
+      "week",
+      "household_id",
+      "store_id",
+      "basket_id",
+      "day",
+      "coupon"
     ],
     acceptedFormats: ["CSV", "Excel (.xlsx, .xls)"],
     example:
@@ -35,13 +36,9 @@ const fileRequirements = [
     requiredColumns: [
       "product_id",
       "product_name",
-      "brand",
       "category",
-      "subcategory",
-      "price",
-      "cost",
+      "brand",
       "size",
-      "unit",
     ],
     acceptedFormats: ["CSV", "Excel (.xlsx, .xls)"],
     example:
@@ -52,14 +49,12 @@ const fileRequirements = [
     name: "Causal Lookup",
     description: "Contains promotion and campaign information",
     requiredColumns: [
-      "causal_id",
-      "campaign_name",
-      "start_date",
-      "end_date",
-      "promotion_type",
-      "discount_type",
-      "discount_value",
-      "affected_products",
+      "product_id",
+      "store_id",
+      "week",
+      "feature_desc",
+      "display_desc",
+      "geography",
     ],
     acceptedFormats: ["CSV", "Excel (.xlsx, .xls)"],
     example:
@@ -122,34 +117,125 @@ export default function AddDatasetPage() {
     }
 
     try {
-      setIsSubmitting(true)
-      setSubmitError(null)
-      setUploadProgress(null)
+      // setIsSubmitting(true)
+      // setSubmitError(null)
+      // setUploadProgress(null)
 
-      const result = await createDataset(
-        {
-          name: datasetName.trim(),
-          description: datasetDescription.trim() || undefined,
-          files: {
-            transaction: files.transaction,
-            product_lookup: files.product_lookup,
-            causal_lookup: files.causal_lookup,
-          },
-        },
-        (progress) => {
-          setUploadProgress(progress)
-        },
-      )
+      // const result = await createDataset(
+      //   {
+      //     name: datasetName.trim(),
+      //     description: datasetDescription.trim() || undefined,
+      //     files: {
+      //       transaction: files.transaction,
+      //       product_lookup: files.product_lookup,
+      //       causal_lookup: files.causal_lookup,
+      //     },
+      //   },
+      //   (progress) => {
+      //     setUploadProgress(progress)
+      //   },
+      // )
 
-      if (result.success) {
-        // Navigate back to dashboard after successful upload
-        setTimeout(() => {
-          router.push("/dashboard")
-        }, 1500) // Give user time to see success message
-      } else {
-        setSubmitError(result.error || "Failed to create dataset")
-        setUploadProgress(null)
+      // if (result.success) {
+      //   // Navigate back to dashboard after successful upload
+      //   setTimeout(() => {
+      //     router.push("/dashboard")
+      //   }, 1500) // Give user time to see success message
+      // } else {
+      //   setSubmitError(result.error || "Failed to create dataset")
+      //   setUploadProgress(null)
+      // }
+
+      ///Create master dataset
+      const access_token = localStorage.getItem("access_token")
+      const u_id = localStorage.getItem("user_id")
+
+      console.log("Create master dataset....")
+      const authResponse = await fetch("http://localhost:8000/datasets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Token ${access_token}`
+        },
+        body: JSON.stringify({
+          user_id: u_id
+        }),
+      })
+
+      console.log("Response", authResponse)
+
+      if (!authResponse.ok) {
+        console.log("Error")
+        throw new Error(`Create master dataset failed: ${authResponse.status}`)
       }
+
+      const data = await authResponse.json()
+      const d_id = data.dataset_id
+
+      if (authResponse.ok) {
+        console.log("Create master dataset successfull", data)
+      }
+
+      const transactionData = new FormData()
+      transactionData.append("transactions", files.transaction!)
+      transactionData.append("user_id", u_id!)
+
+      const fileResponse1 = await fetch(`http://localhost:8000/datasets/${d_id}/transactions`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Token ${access_token}`
+        },
+        body: transactionData
+      })
+
+      if (!fileResponse1.ok) {
+        throw new Error(`Upload transaction file failed: ${fileResponse1.status}`)
+      }
+
+      if (fileResponse1.ok) {
+        console.log("Upload transaction successfull")
+      }
+
+      const productData = new FormData()
+      productData.append("transactions", files.product_lookup!)
+      productData.append("user_id", u_id!)
+
+      const fileResponse2 = await fetch(`http://localhost:8000/datasets/${d_id}/product-lookups`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Token ${access_token}`
+        },
+        body: productData
+      })
+
+      if (!fileResponse2.ok) {
+        throw new Error(`Upload product file failed: ${fileResponse2.status}`)
+      }
+
+      if (fileResponse2.ok) {
+        console.log("Upload product successfull")
+      }
+
+      const causalData = new FormData()
+      causalData.append("transactions", files.causal_lookup!)
+      causalData.append("user_id", u_id!)
+
+      const fileResponse3 = await fetch(`http://localhost:8000/datasets/${d_id}/causallookups`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Token ${access_token}`
+        },
+        body: causalData
+      })
+
+      if (!fileResponse3.ok) {
+        throw new Error(`Upload causal file failed: ${fileResponse3.status}`)
+      }
+
+      if (fileResponse3.ok) {
+        console.log("Upload causal successfull")
+      }
+
     } catch (error) {
       console.error("Error creating dataset:", error)
       setSubmitError("An unexpected error occurred")
