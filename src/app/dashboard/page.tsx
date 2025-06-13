@@ -23,6 +23,7 @@ import { useDatasets } from "@/hooks/use-datasets"
 import CampaignPopup from "@/components/campaign-popup"
 import type { Campaign } from "@/lib/api/campaign"
 import { campaignAPI } from "@/lib/api/campaign"
+import ThemeToggle from "@/components/ui/themetoggle"
 
 export default function DashboardPage() {
   const { user, logOut } = useAuth()
@@ -247,6 +248,9 @@ export default function DashboardPage() {
               <p className="text-xs text-gray-500">Smart Promotion Tools</p>
             </div>
           </div>
+
+          {/* DarkMode button */}
+          {/* <ThemeToggle /> */}
 
           {/* User Menu - Right */}
           <div className="relative">
