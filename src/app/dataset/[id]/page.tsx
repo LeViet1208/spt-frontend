@@ -213,11 +213,6 @@ export default function StatsDashboard() {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold">Dataset Statistics Dashboard</h1>
-          <p className="text-muted-foreground">Explore descriptive statistics and visualizations for your dataset</p>
-        </div>
 
         {/* Variable Selection */}
         <Card>

@@ -4,17 +4,15 @@ import type React from "react"
 
 import { BarChart3, ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, ChevronRight } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useDatasets, type CreateDatasetProgress } from "@/hooks/use-datasets"
-import { auth } from "firebase-admin"
 import { useBack } from "../layout"
-import { useEffect } from "react"
 
 // Define file requirements
 const fileRequirements = [
   {
     id: "transaction",
-    name: "Transaction Data",
+    name: "Transaction",
     description: "Contains all sales transactions with product and store information",
     requiredColumns: [
       "product_id",
@@ -82,19 +80,19 @@ export default function AddDatasetPage() {
 
   const { setCustomBack } = useBack();
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     if (currentStep === 0) {
       router.push("/dashboard")
     } else {
       setCurrentStep(currentStep - 1)
     }
-  }
+  }, [currentStep, router]);
 
   useEffect(() => {
     setCustomBack(() => handleBack);
 
     return () => setCustomBack(() => {}); // reset khi rời trang
-  }, [handleBack]);
+  }, [handleBack, setCustomBack]);
 
   const handleNext = () => {
     if (currentStep < 3) {
@@ -203,14 +201,14 @@ export default function AddDatasetPage() {
       }
 
       if (fileResponse1.ok) {
-        console.log("Upload transaction successfull")
+        console.log("Upload transaction successful")
       }
 
       const productData = new FormData()
-      productData.append("transactions", files.product_lookup!)
+      productData.append("product_lookup", files.product_lookup!)
       productData.append("user_id", u_id!)
 
-      const fileResponse2 = await fetch(`http://localhost:8000/datasets/${d_id}/product-lookups`, {
+      const fileResponse2 = await fetch(`http://localhost:8000/datasets/${d_id}/productlookups`, {
         method: "POST",
         headers: {
           "Authorization": `Token ${access_token}`
@@ -223,11 +221,11 @@ export default function AddDatasetPage() {
       }
 
       if (fileResponse2.ok) {
-        console.log("Upload product successfull")
+        console.log("Upload product successful")
       }
 
       const causalData = new FormData()
-      causalData.append("transactions", files.causal_lookup!)
+      causalData.append("causal_lookup", files.causal_lookup!)
       causalData.append("user_id", u_id!)
 
       const fileResponse3 = await fetch(`http://localhost:8000/datasets/${d_id}/causallookups`, {
@@ -243,7 +241,11 @@ export default function AddDatasetPage() {
       }
 
       if (fileResponse3.ok) {
-        console.log("Upload causal successfull")
+        console.log("Upload causal successful")
+        // Navigate back to dashboard after successful upload
+        setTimeout(() => {
+          router.push("/dashboard")
+        }, 1500) // Give user time to see success message
       }
 
     } catch (error) {
@@ -322,6 +324,15 @@ export default function AddDatasetPage() {
         <h3 className="text-xl font-bold text-gray-900 mb-2">{currentFile.name}</h3>
         <p className="text-gray-600 mb-6">{currentFile.description}</p>
 
+        {/* Hidden file input - always present */}
+        <input
+          type="file"
+          id="file-upload"
+          className="hidden"
+          accept=".csv,.xlsx,.xls"
+          onChange={handleFileChange}
+        />
+
         {/* Required Columns */}
         <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
           <div className="flex items-center gap-2 mb-2">
@@ -339,7 +350,7 @@ export default function AddDatasetPage() {
           <div className="mt-3 flex items-center">
             <button
               onClick={() => setShowExample(!showExample)}
-              className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+              className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer hover:scale-105 transform transition-all duration-200"
             >
               {showExample ? "Hide" : "Show"} example
               <ChevronRight className={`h-3 w-3 transition-transform ${showExample ? "rotate-90" : ""}`} />
@@ -360,32 +371,43 @@ export default function AddDatasetPage() {
           }`}
         >
           {files[currentFile.id] ? (
-            <div className="flex flex-col items-center">
-              <CheckCircle className="h-12 w-12 text-green-500 mb-2" />
-              <h4 className="text-lg font-medium text-gray-900 mb-1">File uploaded successfully</h4>
-              <p className="text-gray-600 mb-3">{files[currentFile.id]?.name}</p>
-              <button
-                onClick={() => setFiles({ ...files, [currentFile.id]: null })}
-                className="text-sm text-red-600 hover:text-red-800"
-              >
-                Remove and upload different file
-              </button>
+            <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-green-300">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-6 w-6 text-green-500" />
+                <div>
+                  <p className="font-medium text-gray-900">{files[currentFile.id]?.name}</p>
+                  <p className="text-sm text-gray-500">File selected successfully</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const input = document.getElementById('file-upload') as HTMLInputElement;
+                    if (input) {
+                      input.value = ''; // Clear the input to allow selecting the same file again
+                      input.click();
+                    }
+                  }}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-md transition-colors cursor-pointer hover:scale-105 transform duration-200"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => setFiles({ ...files, [currentFile.id]: null })}
+                  className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 text-sm rounded-md transition-colors cursor-pointer hover:scale-105 transform duration-200"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           ) : (
             <>
               <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
               <h4 className="text-lg font-medium text-gray-900 mb-2">Upload {currentFile.name}</h4>
               <p className="text-gray-600 mb-4">Drag and drop your file here, or click to browse</p>
-              <input
-                type="file"
-                id="file-upload"
-                className="hidden"
-                accept=".csv,.xlsx,.xls"
-                onChange={handleFileChange}
-              />
               <label
                 htmlFor="file-upload"
-                className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-2 rounded-lg transition-colors inline-block cursor-pointer"
+                className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-2 rounded-lg transition-colors inline-block cursor-pointer hover:scale-105 transform duration-200"
               >
                 Choose File
               </label>
@@ -429,7 +451,7 @@ export default function AddDatasetPage() {
               value={datasetName}
               onChange={(e) => setDatasetName(e.target.value)}
               disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-100 hover:border-gray-400 transition-colors"
               placeholder="Enter dataset name"
               required
             />
@@ -442,7 +464,7 @@ export default function AddDatasetPage() {
               value={datasetDescription}
               onChange={(e) => setDatasetDescription(e.target.value)}
               disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-100 hover:border-gray-400 transition-colors"
               placeholder="Describe your dataset"
             />
           </div>
@@ -520,7 +542,7 @@ export default function AddDatasetPage() {
               <button
                 onClick={handleBack}
                 disabled={isSubmitting}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 cursor-pointer hover:scale-105 transform duration-200"
               >
                 {currentStep === 0 ? "Cancel" : "Back"}
               </button>
@@ -530,7 +552,7 @@ export default function AddDatasetPage() {
                 disabled={
                   isSubmitting || (currentStep < 3 ? !files[fileRequirements[currentStep].id] : !datasetName.trim())
                 }
-                className="px-6 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-6 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer hover:scale-105 transform duration-200 disabled:hover:scale-100"
               >
                 {isSubmitting && <Upload className="h-4 w-4 animate-pulse" />}
                 {isSubmitting ? "Creating..." : currentStep === 3 ? "Create Dataset" : "Next"}

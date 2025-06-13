@@ -62,7 +62,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       // Lưu user info và ID token
       sessionStorage.setItem("user", JSON.stringify(result.user))
-      sessionStorage.setItem("idToken", idToken)
+      sessionStorage.setItem("firebaseIdToken", idToken)
 
       return { ...result, idToken }
     } catch (error) {
@@ -88,7 +88,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await signOut(auth)
       sessionStorage.removeItem("user")
-      sessionStorage.removeItem("idToken")
+      sessionStorage.removeItem("firebaseIdToken")
+      localStorage.removeItem("access_token")
+      localStorage.removeItem("user_id")
     } catch (error) {
       console.error("Error signing out:", error)
       throw error
