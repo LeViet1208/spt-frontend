@@ -6,7 +6,7 @@ import { useState, useMemo, useEffect } from "react"
 import { useParams } from 'next/navigation';
 
 // Mock token for testing - easily editable
-const MOCK_TOKEN = "fca1e6fa40adf6fe8062ee23afdc91885692f971";
+const MOCK_TOKEN = localStorage.getItem("access_token")
 
 // Dynamically import Plot with no SSR to avoid "self is not defined" error
 const Plot = dynamic(() => import('react-plotly.js'), {

@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useDatasets, type CreateDatasetProgress } from "@/hooks/use-datasets"
 import { auth } from "firebase-admin"
+import { useBack } from "../layout"
+import { useEffect } from "react"
 
 // Define file requirements
 const fileRequirements = [
@@ -78,6 +80,8 @@ export default function AddDatasetPage() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [uploadProgress, setUploadProgress] = useState<CreateDatasetProgress | null>(null)
 
+  const { setCustomBack } = useBack();
+
   const handleBack = () => {
     if (currentStep === 0) {
       router.push("/dashboard")
@@ -85,6 +89,12 @@ export default function AddDatasetPage() {
       setCurrentStep(currentStep - 1)
     }
   }
+
+  useEffect(() => {
+    setCustomBack(() => handleBack);
+
+    return () => setCustomBack(() => {}); // reset khi rời trang
+  }, [handleBack]);
 
   const handleNext = () => {
     if (currentStep < 3) {
@@ -468,9 +478,10 @@ export default function AddDatasetPage() {
   }
 
   return (
+    //<DatasetLayout customBack={handleBack}>
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
+      {/* <header className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center gap-4">
           <button
             onClick={handleBack}
@@ -490,7 +501,7 @@ export default function AddDatasetPage() {
             </div>
           </div>
         </div>
-      </header>
+      </header> */}
 
       {/* Main Content */}
       <main className="p-6">
@@ -529,5 +540,6 @@ export default function AddDatasetPage() {
         </div>
       </main>
     </div>
+    //</DatasetLayout>
   )
 }
