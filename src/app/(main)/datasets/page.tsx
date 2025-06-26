@@ -3,7 +3,8 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { useDatasets } from '@/hooks/useDataset'
+import { useDataset } from '@/hooks/useDataset'
+import type { Dataset } from '@/utils/types/dataset'
 import {
   Plus,
   CheckCircle,
@@ -26,16 +27,17 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { DatasetsListSkeleton, DatasetDetailSkeleton, AddDatasetSkeleton } from "@/components/DatasetSkeletons"
 
 // Dynamically import components to avoid SSR issues
 const DatasetDetailView = dynamic(() => import('./[id]/page'), { 
   ssr: false,
-  loading: () => <div className="space-y-6"><Card><CardContent className="p-8"><div className="flex items-center justify-center"><RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" /><span className="ml-3 text-muted-foreground">Loading dataset details...</span></div></CardContent></Card></div>
+  loading: () => <DatasetDetailSkeleton />
 })
 
 const DatasetAddView = dynamic(() => import('./add/page'), { 
   ssr: false,
-  loading: () => <div className="space-y-6"><Card><CardContent className="p-8"><div className="flex items-center justify-center"><RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" /><span className="ml-3 text-muted-foreground">Loading add dataset form...</span></div></CardContent></Card></div>
+  loading: () => <AddDatasetSkeleton />
 })
 
 export default function DatasetsPage() {
@@ -54,8 +56,11 @@ export default function DatasetsPage() {
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState("")
 
+  // Loading state for initial render - tracks if we've ever loaded data
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
+
   // Use the datasets hook
-  const { datasets, loading, error, refreshDatasets } = useDatasets()
+  const { datasets, isLoading: loading, error, fetchDatasets: refreshDatasets } = useDataset()
 
   // Handle navigation
   const handleAddDataset = () => {
@@ -131,7 +136,7 @@ export default function DatasetsPage() {
   }
 
   // Handle dataset click
-  const handleDatasetClick = (dataset: any) => {
+  const handleDatasetClick = (dataset: Dataset) => {
     if (dataset.importStatus !== "import_completed") {
       setToastMessage("Please wait for the dataset to finish uploading before accessing it.")
       setShowToast(true)
@@ -142,6 +147,18 @@ export default function DatasetsPage() {
     // Navigate to dataset detail page using search params
     router.push(`/datasets?id=${dataset.id}`)
   }
+
+  // Fetch datasets on mount
+  useEffect(() => {
+    const loadDatasets = async () => {
+      try {
+        await refreshDatasets()
+      } finally {
+        setHasLoadedOnce(true)
+      }
+    }
+    loadDatasets()
+  }, [])
 
   // Auto-hide toast
   useEffect(() => {
@@ -162,7 +179,7 @@ export default function DatasetsPage() {
   }
 
   // Helper functions for rendering
-  const getStatusBadge = (dataset: any) => {
+  const getStatusBadge = (dataset: Dataset) => {
     if (dataset.importStatus === "import_completed") {
       return <Badge variant="secondary" className="bg-green-50 text-green-700 hover:bg-green-100">
         <CheckCircle className="h-3 w-3 mr-1" />
@@ -176,7 +193,7 @@ export default function DatasetsPage() {
     }
   }
 
-  const getAnalysisStatusBadge = (dataset: any) => {
+  const getAnalysisStatusBadge = (dataset: Dataset) => {
     if (dataset.importStatus !== "import_completed") return null
     
     if (dataset.analysisStatus === "analyzed") {
@@ -235,14 +252,10 @@ export default function DatasetsPage() {
   // Render the main datasets list view
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">Datasets</h1>
-        <p className="text-muted-foreground">Manage and analyze your retail datasets.</p>
-      </div>
 
       {/* Search and Filter Bar */}
       <Card>
-        <CardContent className="p-4">
+        <CardContent>
           <div className="flex items-center gap-4">
             {/* Search Input */}
             <div className="flex-1 relative">
@@ -299,13 +312,8 @@ export default function DatasetsPage() {
 
       {/* Dataset List */}
       <div className="space-y-4">
-        {loading ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <RefreshCw className="h-8 w-8 mx-auto mb-4 text-muted-foreground animate-spin" />
-              <p className="text-muted-foreground">Loading datasets...</p>
-            </CardContent>
-          </Card>
+        {(!hasLoadedOnce || loading) ? (
+          <DatasetsListSkeleton />
         ) : error ? (
           <Card>
             <CardContent className="p-8 text-center">

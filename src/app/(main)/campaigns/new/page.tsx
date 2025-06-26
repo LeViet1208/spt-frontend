@@ -10,8 +10,9 @@ import {
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useDatasets } from "@/hooks/useDataset"
-import { campaignAPI, type CreateCampaignRequest } from "@/utils/api/campaign"
+import { useDataset } from "@/hooks/useDataset"
+import { useCampaign } from "@/hooks/useCampaign"
+import type { CreateCampaignRequest } from "@/utils/types/campaign"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,7 +21,8 @@ import { Separator } from "@/components/ui/separator"
 
 export default function NewCampaignPage() {
   const router = useRouter()
-  const { datasets, loading: datasetsLoading, error: datasetsError, refreshDatasets } = useDatasets()
+  const { datasets, isLoading: datasetsLoading, error: datasetsError, fetchDatasets } = useDataset()
+  const { createCampaign } = useCampaign()
 
   const [formData, setFormData] = useState<CreateCampaignRequest>({
     name: "",
@@ -75,13 +77,13 @@ export default function NewCampaignPage() {
     setSubmitError(null)
 
     try {
-      const response = await campaignAPI.createCampaign(formData)
+      const campaign = await createCampaign(formData)
 
-      if (response.success && response.data) {
+      if (campaign) {
         // Navigate to the new campaign detail page
-        router.push(`/campaign/${response.data.campaign_id}`)
+        router.push(`/campaigns?id=${campaign.campaign_id}`)
       } else {
-        setSubmitError(response.error || "Failed to create campaign")
+        setSubmitError("Failed to create campaign")
       }
     } catch (err) {
       setSubmitError("An unexpected error occurred")
@@ -172,7 +174,7 @@ export default function NewCampaignPage() {
                     <p className="text-sm text-destructive mt-1">{datasetsError}</p>
                     <Button
                       type="button"
-                      onClick={refreshDatasets}
+                      onClick={fetchDatasets}
                       variant="destructive"
                       size="sm"
                       className="mt-2"

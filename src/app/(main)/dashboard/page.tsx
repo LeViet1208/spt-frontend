@@ -2,9 +2,10 @@
 
 import React, { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useDatasets } from '@/hooks/useDataset'
-import { campaignAPI } from '@/utils/api/campaign'
-import type { Campaign } from '@/utils/api/campaign'
+import { useDataset } from '@/hooks/useDataset'
+import { useCampaign } from '@/hooks/useCampaign'
+import type { Campaign } from '@/utils/types/campaign'
+import type { Dataset } from '@/utils/types/dataset'
 import {
   Database,
   Megaphone,
@@ -21,28 +22,13 @@ import { Badge } from "@/components/ui/badge"
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { datasets, loading: datasetsLoading } = useDatasets()
-  const [campaigns, setCampaigns] = React.useState<Campaign[]>([])
-  const [campaignsLoading, setCampaignsLoading] = React.useState(false)
-
-  // Fetch campaigns for overview
-  const fetchCampaigns = async () => {
-    try {
-      setCampaignsLoading(true)
-      const response = await campaignAPI.getAllCampaigns()
-      if (response.success && response.data) {
-        setCampaigns(response.data)
-      }
-    } catch (error) {
-      console.error('Error fetching campaigns:', error)
-    } finally {
-      setCampaignsLoading(false)
-    }
-  }
+  const { datasets, isLoading: datasetsLoading, fetchDatasets } = useDataset()
+  const { allCampaigns: campaigns, isLoading: campaignsLoading, fetchAllCampaigns } = useCampaign()
 
   useEffect(() => {
-    fetchCampaigns()
-  }, [])
+    fetchDatasets()
+    fetchAllCampaigns()
+  }, [fetchDatasets, fetchAllCampaigns])
 
   // Calculate stats
   const completedDatasets = datasets.filter(d => d.importStatus === 'import_completed').length
@@ -62,11 +48,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard</h1>
-        <p className="text-muted-foreground">Overview of your datasets and campaigns.</p>
-      </div>
-
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>

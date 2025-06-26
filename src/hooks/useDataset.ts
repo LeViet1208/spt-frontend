@@ -1,60 +1,89 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { datasetAPI, type Dataset } from "@/utils/api/dataset";
+import { useState, useCallback } from "react";
+import { AxiosError } from "axios";
+import { useToast } from "@/hooks/useToast";
+import { datasetService } from "@/utils/services/dataset";
+import {
+	Dataset,
+	CreateDatasetRequest,
+	CreateDatasetProgress,
+} from "@/utils/types/dataset";
 
-export interface CreateDatasetRequest {
-	name: string;
-	description?: string;
-	files: {
-		transaction: File;
-		product_lookup: File;
-		causal_lookup: File;
-	};
-}
+export type { CreateDatasetProgress };
 
-export interface CreateDatasetProgress {
-	step:
-		| "creating_master"
-		| "uploading_transaction"
-		| "uploading_product_lookup"
-		| "uploading_causal_lookup"
-		| "completed";
-	progress: number;
-	message: string;
-}
+export const useDataset = () => {
+	const { showSuccessToast, showErrorToast } = useToast();
 
-export function useDatasets() {
 	const [datasets, setDatasets] = useState<Dataset[]>([]);
-	const [loading, setLoading] = useState(true);
+	const [currentDataset, setCurrentDataset] = useState<Dataset | null>(null);
+	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	// Fetch datasets
-	const fetchDatasets = useCallback(async () => {
-		try {
-			setLoading(true);
-			setError(null);
-			const response = await datasetAPI.getDatasets();
+	const handleError = useCallback(
+		(err: unknown, defaultMessage: string) => {
+			console.error(err);
+			const axiosError = err as AxiosError<{ message?: string }>;
+			const message = axiosError?.response?.data?.message || defaultMessage;
+			setError(message);
+			showErrorToast(message);
+		},
+		[showErrorToast]
+	);
 
+	const fetchDatasets = useCallback(async () => {
+		setIsLoading(true);
+		setError(null);
+		try {
+			const response = await datasetService.getDatasets();
 			if (response.success && response.data) {
 				setDatasets(response.data);
 			} else {
-				setError(response.error || "Failed to fetch datasets");
+				handleError(
+					new Error(response.error),
+					response.error || "Failed to fetch datasets"
+				);
 			}
 		} catch (err) {
-			setError("An unexpected error occurred");
-			console.error("Error in fetchDatasets:", err);
+			handleError(err, "Failed to fetch datasets");
 		} finally {
-			setLoading(false);
+			setIsLoading(false);
 		}
-	}, []);
+	}, [handleError]);
 
-	// Create new dataset with 4-step process
+	const fetchDataset = useCallback(
+		async (id: number) => {
+			setIsLoading(true);
+			setError(null);
+			try {
+				const response = await datasetService.getDatasetById(id);
+				if (response.success && response.data) {
+					setCurrentDataset(response.data);
+					return response.data;
+				} else {
+					handleError(
+						new Error(response.error),
+						response.error || "Failed to fetch dataset"
+					);
+					return null;
+				}
+			} catch (err) {
+				handleError(err, "Failed to fetch dataset");
+				return null;
+			} finally {
+				setIsLoading(false);
+			}
+		},
+		[handleError]
+	);
+
 	const createDataset = useCallback(
 		async (
 			request: CreateDatasetRequest,
 			onProgress?: (progress: CreateDatasetProgress) => void
 		) => {
+			setIsLoading(true);
+			setError(null);
 			try {
 				// Step 1: Create dataset master
 				onProgress?.({
@@ -63,16 +92,17 @@ export function useDatasets() {
 					message: "Creating dataset...",
 				});
 
-				const masterResponse = await datasetAPI.createDatasetMaster({
+				const masterResponse = await datasetService.createDatasetMaster({
 					name: request.name,
 					description: request.description,
 				});
 
 				if (!masterResponse.success || !masterResponse.data) {
-					return {
-						success: false,
-						error: masterResponse.error || "Failed to create dataset master",
-					};
+					handleError(
+						new Error(masterResponse.error),
+						masterResponse.error || "Failed to create dataset master"
+					);
+					return null;
 				}
 
 				const { datasetId, dataset } = masterResponse.data;
@@ -87,18 +117,18 @@ export function useDatasets() {
 					message: "Uploading transaction file...",
 				});
 
-				const transactionResponse = await datasetAPI.uploadTransactionFile({
+				const transactionResponse = await datasetService.uploadTransactionFile({
 					datasetId,
 					file: request.files.transaction,
 					fileType: "transaction",
 				});
 
 				if (!transactionResponse.success) {
-					return {
-						success: false,
-						error:
-							transactionResponse.error || "Failed to upload transaction file",
-					};
+					handleError(
+						new Error(transactionResponse.error),
+						transactionResponse.error || "Failed to upload transaction file"
+					);
+					return null;
 				}
 
 				// Update dataset status
@@ -117,18 +147,18 @@ export function useDatasets() {
 					message: "Uploading product lookup file...",
 				});
 
-				const productResponse = await datasetAPI.uploadProductLookupFile({
+				const productResponse = await datasetService.uploadProductLookupFile({
 					datasetId,
 					file: request.files.product_lookup,
 					fileType: "product_lookup",
 				});
 
 				if (!productResponse.success) {
-					return {
-						success: false,
-						error:
-							productResponse.error || "Failed to upload product lookup file",
-					};
+					handleError(
+						new Error(productResponse.error),
+						productResponse.error || "Failed to upload product lookup file"
+					);
+					return null;
 				}
 
 				// Update dataset status
@@ -147,18 +177,18 @@ export function useDatasets() {
 					message: "Uploading causal lookup file...",
 				});
 
-				const causalResponse = await datasetAPI.uploadCausalLookupFile({
+				const causalResponse = await datasetService.uploadCausalLookupFile({
 					datasetId,
 					file: request.files.causal_lookup,
 					fileType: "causal_lookup",
 				});
 
 				if (!causalResponse.success) {
-					return {
-						success: false,
-						error:
-							causalResponse.error || "Failed to upload causal lookup file",
-					};
+					handleError(
+						new Error(causalResponse.error),
+						causalResponse.error || "Failed to upload causal lookup file"
+					);
+					return null;
 				}
 
 				// Final update - mark as completed
@@ -176,53 +206,73 @@ export function useDatasets() {
 					message: "Dataset created successfully!",
 				});
 
-				return { success: true, data: dataset };
+				showSuccessToast("Dataset created successfully!");
+				return dataset;
 			} catch (err) {
-				console.error("Error in createDataset:", err);
-				return { success: false, error: "An unexpected error occurred" };
+				handleError(err, "Failed to create dataset");
+				return null;
+			} finally {
+				setIsLoading(false);
 			}
 		},
-		[]
+		[handleError, showSuccessToast]
 	);
 
-	// Delete dataset
-	const deleteDataset = useCallback(async (id: number) => {
-		try {
-			const response = await datasetAPI.deleteDataset(id);
-
-			if (response.success) {
-				// Remove dataset from the list
-				setDatasets((prev) => prev.filter((dataset) => dataset.id !== id));
-				return { success: true };
-			} else {
-				return {
-					success: false,
-					error: response.error || "Failed to delete dataset",
-				};
+	const deleteDataset = useCallback(
+		async (id: number) => {
+			setIsLoading(true);
+			setError(null);
+			try {
+				const response = await datasetService.deleteDataset(id);
+				if (response.success) {
+					setDatasets((prev) => prev.filter((dataset) => dataset.id !== id));
+					if (currentDataset?.id === id) {
+						setCurrentDataset(null);
+					}
+					showSuccessToast("Dataset deleted successfully!");
+					return true;
+				} else {
+					handleError(
+						new Error(response.error),
+						response.error || "Failed to delete dataset"
+					);
+					return false;
+				}
+			} catch (err) {
+				handleError(err, "Failed to delete dataset");
+				return false;
+			} finally {
+				setIsLoading(false);
 			}
-		} catch (err) {
-			console.error("Error in deleteDataset:", err);
-			return { success: false, error: "An unexpected error occurred" };
-		}
+		},
+		[handleError, showSuccessToast, currentDataset]
+	);
+
+	const clearError = useCallback(() => {
+		setError(null);
 	}, []);
 
-	// Refresh datasets
-	const refreshDatasets = useCallback(() => {
-		fetchDatasets();
-	}, [fetchDatasets]);
-
-	// Initial fetch
-	useEffect(() => {
-		fetchDatasets();
-	}, [fetchDatasets]);
+	const resetState = useCallback(() => {
+		setDatasets([]);
+		setCurrentDataset(null);
+		setError(null);
+	}, []);
 
 	return {
+		// State
 		datasets,
-		loading,
+		currentDataset,
+		isLoading,
 		error,
+
+		// Methods
+		fetchDatasets,
+		fetchDataset,
 		createDataset,
 		deleteDataset,
-		refreshDatasets,
-		refetch: fetchDatasets,
+
+		// Utility methods
+		clearError,
+		resetState,
 	};
-}
+};

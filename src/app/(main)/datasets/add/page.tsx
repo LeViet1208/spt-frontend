@@ -5,7 +5,7 @@ import type React from "react"
 import { BarChart3, ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, ChevronRight } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useEffect, useCallback } from "react"
-import { useDatasets, type CreateDatasetProgress } from "@/hooks/useDataset"
+import { useDataset, type CreateDatasetProgress } from "@/hooks/useDataset"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -67,7 +67,7 @@ const fileRequirements = [
 
 export default function AddDatasetPage() {
   const router = useRouter()
-  const { createDataset } = useDatasets()
+  const { createDataset } = useDataset()
   const [currentStep, setCurrentStep] = useState(0)
   const [datasetName, setDatasetName] = useState("")
   const [datasetDescription, setDatasetDescription] = useState("")

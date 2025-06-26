@@ -3,7 +3,8 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { campaignAPI, type Campaign, type PromotionRule } from '@/utils/api/campaign'
+import { useCampaign } from '@/hooks/useCampaign'
+import type { Campaign, PromotionRule } from '@/utils/types/campaign'
 import {
   Plus,
   CheckCircle,
@@ -40,16 +41,16 @@ export default function CampaignsPage() {
   const id = searchParams.get('id')
   const view = searchParams.get('view')
   
+  // Use campaign hook
+  const { allCampaigns, isLoading: campaignLoading, error: campaignError, fetchAllCampaigns, fetchPromotionRules } = useCampaign()
+  
   // Search and sort state
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Campaign state
-  const [allCampaigns, setAllCampaigns] = useState<Campaign[]>([])
-  const [campaignLoading, setCampaignLoading] = useState(false)
-  const [campaignError, setCampaignError] = useState<string | null>(null)
+  // Promotion rules state
   const [promotionRules, setPromotionRules] = useState<{ [campaignId: number]: PromotionRule[] }>({})
   const [promotionRulesLoading, setPromotionRulesLoading] = useState<{ [campaignId: number]: boolean }>({})
 
@@ -66,39 +67,14 @@ export default function CampaignsPage() {
     fetchAllCampaigns()
   }
 
-  const fetchAllCampaigns = async () => {
-    try {
-      setCampaignLoading(true)
-      setCampaignError(null)
-
-      const response = await campaignAPI.getAllCampaigns()
-
-      if (response.success && response.data) {
-        setAllCampaigns(response.data)
-        
-        // Fetch promotion rules for each campaign
-        for (const campaign of response.data) {
-          fetchPromotionRules(campaign.campaign_id)
-        }
-      } else {
-        setCampaignError(response.error || "Failed to fetch campaigns")
-      }
-    } catch (err) {
-      setCampaignError("An unexpected error occurred")
-      console.error("Error fetching campaigns:", err)
-    } finally {
-      setCampaignLoading(false)
-    }
-  }
-
-  const fetchPromotionRules = async (campaignId: number) => {
+  const handleFetchPromotionRules = async (campaignId: number) => {
     try {
       setPromotionRulesLoading(prev => ({ ...prev, [campaignId]: true }))
       
-      const response = await campaignAPI.getPromotionRules(campaignId)
+      const rules = await fetchPromotionRules(campaignId)
       
-      if (response.success && response.data) {
-        setPromotionRules(prev => ({ ...prev, [campaignId]: response.data! }))
+      if (rules) {
+        setPromotionRules(prev => ({ ...prev, [campaignId]: rules }))
       }
     } catch (err) {
       console.error("Error fetching promotion rules:", err)
@@ -231,14 +207,9 @@ export default function CampaignsPage() {
   // Render the main campaigns list view
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">Campaigns</h1>
-        <p className="text-muted-foreground">Create and manage your promotion campaigns.</p>
-      </div>
-
       {/* Search and Filter Bar */}
       <Card>
-        <CardContent className="p-4">
+        <CardContent>
           <div className="flex items-center gap-4">
             {/* Search Input */}
             <div className="flex-1 relative">

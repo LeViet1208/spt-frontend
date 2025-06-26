@@ -16,7 +16,8 @@ import {
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { campaignAPI, type Campaign, type PromotionRule } from "@/utils/api/campaign"
+import { useCampaign } from "@/hooks/useCampaign"
+import type { Campaign, PromotionRule } from "@/utils/types/campaign"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -35,6 +36,9 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
   // Get campaign ID from either params or search params
   const campaignId = parseInt(params?.id || searchParams.get('id') || '0')
 
+  // Use campaign hook
+  const { allCampaigns, isLoading: campaignsLoading, error: campaignsError, fetchAllCampaigns, fetchPromotionRules: hookFetchPromotionRules } = useCampaign()
+
   const [campaign, setCampaign] = useState<Campaign | null>(null)
   const [promotionRules, setPromotionRules] = useState<PromotionRule[]>([])
   const [loading, setLoading] = useState(true)
@@ -48,19 +52,19 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
       setLoading(true)
       setError(null)
 
-      // For now, we'll get campaign from the list since there's no single campaign endpoint
-      const response = await campaignAPI.getAllCampaigns()
+      // Get campaign from the allCampaigns list
+      await fetchAllCampaigns()
       
-      if (response.success && response.data) {
-        const foundCampaign = response.data.find(c => c.campaign_id === campaignId)
+      if (allCampaigns.length > 0) {
+        const foundCampaign = allCampaigns.find((c: Campaign) => c.campaign_id === campaignId)
         if (foundCampaign) {
           setCampaign(foundCampaign)
-          await fetchPromotionRules()
+          await fetchPromotionRulesData()
         } else {
           setError("Campaign not found")
         }
-      } else {
-        setError(response.error || "Failed to fetch campaign")
+      } else if (campaignsError) {
+        setError(campaignsError)
       }
     } catch (err) {
       setError("An unexpected error occurred")
@@ -70,17 +74,15 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
     }
   }
 
-  const fetchPromotionRules = async () => {
+  const fetchPromotionRulesData = async () => {
     try {
       setRulesLoading(true)
       setRulesError(null)
 
-      const response = await campaignAPI.getPromotionRules(campaignId)
+      const rules = await hookFetchPromotionRules(campaignId)
       
-      if (response.success && response.data) {
-        setPromotionRules(response.data)
-      } else {
-        setRulesError(response.error || "Failed to fetch promotion rules")
+      if (rules) {
+        setPromotionRules(rules)
       }
     } catch (err) {
       setRulesError("An unexpected error occurred")
@@ -94,7 +96,7 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
     if (campaignId) {
       fetchCampaignData()
     }
-  }, [campaignId])
+  }, [campaignId, allCampaigns])
 
   const handleBack = () => {
     router.back()
@@ -283,7 +285,7 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
                 <div className="text-center py-8">
                   <AlertCircle className="h-8 w-8 mx-auto mb-4 text-destructive" />
                   <CardDescription className="mb-4">{rulesError}</CardDescription>
-                  <Button onClick={fetchPromotionRules} variant="destructive">
+                  <Button onClick={fetchPromotionRulesData} variant="destructive">
                     Try Again
                   </Button>
                 </div>
