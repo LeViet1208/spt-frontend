@@ -88,25 +88,6 @@ export default function DatasetDetailView({ params }: DatasetDetailViewProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center gap-4">
-            <Button onClick={handleBack} variant="outline" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <CardTitle className="text-2xl">Dataset Analytics</CardTitle>
-              <CardDescription>
-                {currentDataset
-                  ? `Explore statistical insights for ${currentDataset.name}`
-                  : `Explore statistical insights for Dataset ${datasetId}`}
-              </CardDescription>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Variable Selection */}
       <Card>
         <CardHeader>

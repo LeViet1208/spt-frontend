@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge"
 const fileRequirements = [
   {
     id: "transaction",
-    name: "Transaction",
+    name: "Transactions",
     description: "Contains all sales transactions with product and store information",
     requiredColumns: [
       "product_id",
@@ -34,7 +34,7 @@ const fileRequirements = [
   },
   {
     id: "product_lookup",
-    name: "Product Lookup",
+    name: "Products",
     description: "Contains product details and categorization",
     requiredColumns: [
       "product_id",
@@ -49,7 +49,7 @@ const fileRequirements = [
   },
   {
     id: "causal_lookup",
-    name: "Causal Lookup",
+    name: "Causal Data",
     description: "Contains promotion and campaign information",
     requiredColumns: [
       "product_id",
@@ -269,7 +269,7 @@ export default function AddDatasetPage() {
             <span>4</span>
           </div>
           <span className={`text-xs mt-2 ${currentStep === 3 ? "font-medium text-foreground" : "text-muted-foreground"}`}>
-            Finalize
+            Final
           </span>
         </div>
       </div>
@@ -499,26 +499,6 @@ export default function AddDatasetPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center gap-4">
-            <Button
-              onClick={handleBack}
-              variant="outline"
-              size="icon"
-              disabled={isSubmitting}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <CardTitle className="text-2xl">Add New Dataset</CardTitle>
-              <CardDescription>Upload your retail data files to create a new dataset</CardDescription>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Main Content */}
       <Card>
         <CardContent className="p-8">
