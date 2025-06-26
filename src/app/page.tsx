@@ -154,7 +154,7 @@ export default function LandingPage() {
         {/* CTA Button */}
         <button
           className="bg-gray-900 hover:bg-gray-800 text-white font-semibold py-4 px-12 rounded-full text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
-          onClick={() => router.push("/signin")}
+          onClick={() => router.push("/login")}
         >
           Start Your Analysis
         </button>
