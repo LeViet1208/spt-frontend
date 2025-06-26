@@ -227,38 +227,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Activity Overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Quick Stats
-          </CardTitle>
-          <CardDescription>
-            At-a-glance view of your data and campaigns
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-            <div className="p-4 bg-muted/50 rounded-lg">
-              <Database className="h-8 w-8 mx-auto mb-2 text-blue-600" />
-              <p className="text-2xl font-bold">{datasets.length}</p>
-              <p className="text-sm text-muted-foreground">Datasets Uploaded</p>
-            </div>
-            <div className="p-4 bg-muted/50 rounded-lg">
-              <BarChart3 className="h-8 w-8 mx-auto mb-2 text-purple-600" />
-              <p className="text-2xl font-bold">{analyzedDatasets}</p>
-              <p className="text-sm text-muted-foreground">Datasets Analyzed</p>
-            </div>
-            <div className="p-4 bg-muted/50 rounded-lg">
-              <Megaphone className="h-8 w-8 mx-auto mb-2 text-green-600" />
-              <p className="text-2xl font-bold">{activeCampaigns}</p>
-              <p className="text-sm text-muted-foreground">Active Campaigns</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

@@ -143,3 +143,17 @@ export interface DatasetAnalyticsResponse {
 	data?: VariableStats;
 	error?: string;
 }
+
+export interface ColumnRequirement {
+	name: string;
+	description: string;
+	example: string;
+}
+
+export interface FileRequirement {
+	id: string;
+	name: string;
+	description: string;
+	requiredColumns: ColumnRequirement[];
+	acceptedFormats: string[];
+}

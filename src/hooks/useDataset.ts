@@ -22,6 +22,14 @@ export const useDataset = () => {
 
 	const handleError = useCallback(
 		(err: unknown, defaultMessage: string) => {
+			// Check if the error is a redirect signal from the API interceptor
+			if (err && typeof err === "object" && (err as any).isRedirect) {
+				console.log(
+					"Redirect initiated by API interceptor, suppressing error toast."
+				);
+				return; // Do not show toast or set error state if redirecting
+			}
+
 			console.error(err);
 			const axiosError = err as AxiosError<{ message?: string }>;
 			const message = axiosError?.response?.data?.message || defaultMessage;

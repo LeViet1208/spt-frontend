@@ -11,7 +11,6 @@ import {
   Upload,
   BarChart,
   Clock,
-  RefreshCw,
   AlertCircle,
   Database,
   Search,
@@ -75,9 +74,6 @@ export default function DatasetsPage() {
     router.push("/datasets")
   }
 
-  const handleRefresh = () => {
-    refreshDatasets()
-  }
 
   // Debounce search query
   useEffect(() => {
@@ -162,7 +158,15 @@ export default function DatasetsPage() {
       }
     }
     loadDatasets()
-  }, [])
+
+    // Set up interval for refreshing datasets every 1 minute (60000 ms)
+    const intervalId = setInterval(() => {
+      refreshDatasets();
+    }, 60000);
+
+    // Clean up interval on component unmount
+    return () => clearInterval(intervalId);
+  }, [refreshDatasets]);
 
   // Auto-hide toast
   useEffect(() => {
@@ -171,16 +175,6 @@ export default function DatasetsPage() {
       return () => clearTimeout(timer)
     }
   }, [showToast])
-
-  // If we have an ID, show the detail view
-  if (id) {
-    return <DatasetDetailView params={{ id }} />
-  }
-
-  // If view is add, show the add form
-  if (view === 'add') {
-    return <DatasetAddView />
-  }
 
   // Helper function to determine dataset status and progress
   const getDatasetStatusAndProgress = (dataset: Dataset) => {
@@ -224,215 +218,211 @@ export default function DatasetsPage() {
   // Render the main datasets list view
   return (
     <div className="space-y-6">
+      {/* Conditional rendering of detail/add views */}
+      {id && <DatasetDetailView params={{ id }} />}
+      {view === 'add' && <DatasetAddView />}
 
-      {/* Search and Filter Bar */}
-      <Card>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            {/* Search Input */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search datasets by name or description..."
-                value={searchQuery}
-                onChange={handleSearchChange}
-                className="pl-10"
-              />
-            </div>
-            
-            {/* Sort Button */}
-            <Button
-              variant="outline"
-              onClick={handleSortToggle}
-              className="flex items-center gap-2"
-            >
-              {sortOrder === 'desc' ? (
-                <SortDesc className="h-4 w-4" />
-              ) : (
-                <SortAsc className="h-4 w-4" />
-              )}
-              {sortOrder === 'desc' ? 'Newest' : 'Oldest'}
-            </Button>
-
-            {/* Refresh Button */}
-            <Button
-              variant="outline"
-              onClick={handleRefresh}
-              disabled={loading}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
-
-            {/* Add Dataset Button */}
-            {/* View Mode Toggle */}
-            <div className="flex items-center gap-2">
-              <Button
-                variant={viewMode === 'list' ? 'secondary' : 'outline'}
-                size="icon"
-                onClick={() => setViewMode('list')}
-                aria-label="List View"
-              >
-                <List className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'grid' ? 'secondary' : 'outline'}
-                size="icon"
-                onClick={() => setViewMode('grid')}
-                aria-label="Grid View"
-              >
-                <Grid className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {/* Add Dataset Button */}
-            <Button onClick={handleAddDataset} className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Add Dataset
-            </Button>
-          </div>
-          
-          {/* Search Results Count */}
-          {debouncedSearchQuery.trim() && (
-            <div className="mt-2 text-sm text-muted-foreground">
-              {filteredAndSortedDatasets.length} dataset{filteredAndSortedDatasets.length !== 1 ? 's' : ''} found
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Dataset List/Grid */}
-      <div className={viewMode === 'list' ? "space-y-4" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"}>
-        {(!hasLoadedOnce || loading) ? (
-          <DatasetsListSkeleton />
-        ) : error ? (
+      {/* Only render the main list if not in detail or add view */}
+      {!id && view !== 'add' && (
+        <>
+          {/* Search and Filter Bar */}
           <Card>
-            <CardContent className="p-8 text-center">
-              <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
-              <CardTitle className="text-lg mb-2 text-destructive">Error loading datasets</CardTitle>
-              <CardDescription className="mb-4">{error}</CardDescription>
-              <Button onClick={handleRefresh} variant="destructive">
-                Try Again
-              </Button>
-            </CardContent>
-          </Card>
-        ) : filteredAndSortedDatasets.length === 0 && debouncedSearchQuery.trim() ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Database className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <CardTitle className="text-lg mb-2">No datasets match your search</CardTitle>
-              <CardDescription>Try adjusting your search terms</CardDescription>
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            {filteredAndSortedDatasets.map((dataset) => {
-              const { statusMessage, progressValue, isError } = getDatasetStatusAndProgress(dataset);
-              return (
-                <Card 
-                  key={dataset.id} 
-                  className="hover:shadow-md cursor-pointer transition-shadow duration-200"
-                  onClick={() => handleDatasetClick(dataset)}
+            <CardContent>
+              <div className="flex items-center gap-4">
+                {/* Search Input */}
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Search datasets by name or description..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    className="pl-10"
+                  />
+                </div>
+                
+                {/* Sort Button */}
+                <Button
+                  variant="outline"
+                  onClick={handleSortToggle}
+                  className="flex items-center gap-2"
                 >
-                  <CardContent>
-                    {/* Main Dataset Information */}
-                    <div className="flex flex-col">
-                      {/* Row 1: Name, Date Created, Description */}
-                      <div className="flex items-center gap-4">
-                        <div className="w-5 h-5 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
-                          <Database className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                        <div className="flex-1 flex flex-col">
-                          <div className="flex items-center gap-2 text-sm">
-                            <CardTitle className="text-base">{dataset.name}</CardTitle>
-                            <span className="text-muted-foreground">•</span>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Calendar className="h-3 w-3" />
-                              <span>{new Date(dataset.createdAt || '').toLocaleDateString()}</span>
-                            </div>
-                          </div>
-                          {dataset.description && (
-                            <CardDescription className="text-sm max-w-full line-clamp-1 mt-1">{dataset.description}</CardDescription>
-                          )}
-                        </div>
-                        {viewMode === 'list' && (
-                          <div className="flex items-center gap-2">
-                            <div className="text-xs font-medium text-muted-foreground">
-                              {statusMessage}
-                            </div>
-                            {progressValue === 100 && !isError ? (
-                              <CheckCircle className="h-4 w-4 text-chart-2" />
-                            ) : (
-                              <Spinner 
-                                size="sm" 
-                                color={isError ? "destructive" : "chart-3"} 
-                                shimmer={progressValue < 100 && !isError} 
-                              />
-                            )}
-                          </div>
-                        )}
-                      </div>
+                  {sortOrder === 'desc' ? (
+                    <SortDesc className="h-4 w-4" />
+                  ) : (
+                    <SortAsc className="h-4 w-4" />
+                  )}
+                  {sortOrder === 'desc' ? 'Newest' : 'Oldest'}
+                </Button>
 
-                      {/* Row 2: Progress Bar (only for grid view) */}
-                      {viewMode === 'grid' && (
-                        <div className="flex flex-col">
-                          <div className="text-xs font-medium text-muted-foreground text-center my-2">
-                            {statusMessage}
-                          </div>
-                          <Progress
-                            value={progressValue}
-                            className={`h-2 ${isError ? 'bg-red-500' : ''}`}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                {/* View Mode Toggle */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={viewMode === 'list' ? 'secondary' : 'outline'}
+                    size="icon"
+                    onClick={() => setViewMode('list')}
+                    aria-label="List View"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'grid' ? 'secondary' : 'outline'}
+                    size="icon"
+                    onClick={() => setViewMode('grid')}
+                    aria-label="Grid View"
+                  >
+                    <Grid className="h-4 w-4" />
+                  </Button>
+                </div>
 
-            {/* Show empty state only when no datasets exist */}
-            {filteredAndSortedDatasets.length === 0 && !debouncedSearchQuery.trim() && (
+                {/* Add Dataset Button */}
+                <Button onClick={handleAddDataset} className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add Dataset
+                </Button>
+              </div>
+              
+              {/* Search Results Count */}
+              {debouncedSearchQuery.trim() && (
+                <div className="mt-2 text-sm text-muted-foreground">
+                  {filteredAndSortedDatasets.length} dataset{filteredAndSortedDatasets.length !== 1 ? 's' : ''} found
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Dataset List/Grid */}
+          <div className={viewMode === 'list' ? "space-y-4" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"}>
+            {(!hasLoadedOnce || loading) ? (
+              <DatasetsListSkeleton />
+            ) : error ? (
               <Card>
                 <CardContent className="p-8 text-center">
-                  <Database className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <CardTitle className="text-lg mb-2">No datasets found</CardTitle>
-                  <CardDescription className="mb-4">Get started by adding your first dataset</CardDescription>
-                  <Button onClick={handleAddDataset}>
-                    Add Dataset
+                  <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
+                  <CardTitle className="text-lg mb-2 text-destructive">Error loading datasets</CardTitle>
+                  <CardDescription className="mb-4">{error}</CardDescription>
+                  <Button onClick={refreshDatasets} variant="destructive">
+                    Try Again
                   </Button>
                 </CardContent>
               </Card>
-            )}
-          </>
-        )}
-      </div>
+            ) : filteredAndSortedDatasets.length === 0 && debouncedSearchQuery.trim() ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Database className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <CardTitle className="text-lg mb-2">No datasets match your search</CardTitle>
+                  <CardDescription>Try adjusting your search terms</CardDescription>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {filteredAndSortedDatasets.map((dataset) => {
+                  const { statusMessage, progressValue, isError } = getDatasetStatusAndProgress(dataset);
+                  return (
+                    <Card 
+                      key={dataset.id} 
+                      className="hover:shadow-md cursor-pointer transition-shadow duration-200"
+                      onClick={() => handleDatasetClick(dataset)}
+                    >
+                      <CardContent>
+                        {/* Main Dataset Information */}
+                        <div className="flex flex-col">
+                          {/* Row 1: Name, Date Created, Description */}
+                          <div className="flex items-center gap-4">
+                            <div className="w-5 h-5 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
+                              <Database className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                            <div className="flex-1 flex flex-col">
+                              <div className="flex items-center gap-2 text-sm">
+                                <CardTitle className="text-base">{dataset.name}</CardTitle>
+                                <span className="text-muted-foreground">•</span>
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <Calendar className="h-3 w-3" />
+                                  <span>{new Date(dataset.createdAt || '').toLocaleDateString()}</span>
+                                </div>
+                              </div>
+                              {dataset.description && (
+                                <CardDescription className="text-sm max-w-full line-clamp-1 mt-1">{dataset.description}</CardDescription>
+                              )}
+                            </div>
+                            {viewMode === 'list' && (
+                              <div className="flex items-center gap-2">
+                                <div className="text-xs font-medium text-muted-foreground">
+                                  {statusMessage}
+                                </div>
+                                {progressValue === 100 && !isError ? (
+                                  <CheckCircle className="h-4 w-4 text-chart-2" />
+                                ) : (
+                                  <Spinner 
+                                    size="sm" 
+                                    color={isError ? "destructive" : "chart-3"} 
+                                    shimmer={progressValue < 100 && !isError} 
+                                  />
+                                )}
+                              </div>
+                            )}
+                          </div>
 
-      {/* Toast Notification */}
-      {showToast && (
-        <div className="fixed bottom-4 right-4 z-50">
-          <Card className="max-w-sm border-amber-200 bg-amber-50">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <CardTitle className="text-sm font-medium text-amber-800">Dataset Not Ready</CardTitle>
-                  <CardDescription className="text-sm text-amber-700 mt-1">{toastMessage}</CardDescription>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowToast(false)}
-                  className="text-amber-600 hover:text-amber-800 h-auto p-0"
-                >
-                  <XCircle className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                          {/* Row 2: Progress Bar (only for grid view) */}
+                          {viewMode === 'grid' && (
+                            <div className="flex flex-col">
+                              <div className="text-xs font-medium text-muted-foreground text-center my-2">
+                                {statusMessage}
+                              </div>
+                              <Progress
+                                value={progressValue}
+                                className={`h-2 ${isError ? 'bg-red-500' : ''}`}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+
+                {/* Show empty state only when no datasets exist */}
+                {filteredAndSortedDatasets.length === 0 && !debouncedSearchQuery.trim() && (
+                  <Card>
+                    <CardContent className="p-8 text-center">
+                      <Database className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                      <CardTitle className="text-lg mb-2">No datasets found</CardTitle>
+                      <CardDescription className="mb-4">Get started by adding your first dataset</CardDescription>
+                      <Button onClick={handleAddDataset}>
+                        Add Dataset
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Toast Notification */}
+          {showToast && (
+            <div className="fixed bottom-4 right-4 z-50">
+              <Card className="max-w-sm border-amber-200 bg-amber-50">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <CardTitle className="text-sm font-medium text-amber-800">Dataset Not Ready</CardTitle>
+                      <CardDescription className="text-sm text-amber-700 mt-1">{toastMessage}</CardDescription>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowToast(false)}
+                      className="text-amber-600 hover:text-amber-800 h-auto p-0"
+                    >
+                      <XCircle className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

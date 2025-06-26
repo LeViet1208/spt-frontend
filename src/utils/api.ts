@@ -52,19 +52,20 @@ api.interceptors.response.use(
 	(response: AxiosResponse) => response,
 	async (error: AxiosError) => {
 		const originalRequest = error.config as InternalAxiosRequestConfig & {
-			_retry?: boolean;
+			_retryCount?: number;
 		};
 
-		if (error.response?.status === 401 && !originalRequest._retry) {
-			originalRequest._retry = true;
+		const MAX_RETRIES = 2; // Define max retries
 
-			// Check if it's an invalid Firebase ID token error
-			if (
-				error.response?.data &&
-				typeof error.response.data === "string" &&
-				error.response.data.includes("Invalid Firebase ID token")
-			) {
-				// Clear authentication and redirect to login
+		if (error.response?.status === 401) {
+			originalRequest._retryCount = originalRequest._retryCount || 0;
+
+			if (originalRequest._retryCount < MAX_RETRIES) {
+				originalRequest._retryCount++;
+				// Retry the request
+				return api(originalRequest);
+			} else {
+				// Max retries reached, clear authentication and redirect to login
 				if (authStore) {
 					authStore.getState().clearAuth();
 				}
@@ -75,24 +76,14 @@ api.interceptors.response.use(
 				) {
 					window.location.href = "/login";
 				}
-				return Promise.reject(error);
+				// Throw a specific error to indicate a redirect is initiated,
+				// preventing further error processing in components.
+				const redirectError = new Error("REDIRECT_INITIATED");
+				(redirectError as any).isRedirect = true;
+				return Promise.reject(redirectError);
 			}
-
-			// For other 401 errors, also clear auth and redirect
-			if (authStore) {
-				authStore.getState().clearAuth();
-			}
-
-			if (
-				typeof window !== "undefined" &&
-				window.location.pathname !== "/login"
-			) {
-				window.location.href = "/login";
-			}
-
-			return Promise.reject(error);
 		}
 
-		return Promise.reject(error);
+		return Promise.reject(error); // For all other errors, or 401s that didn't trigger redirect
 	}
 );
