@@ -5,8 +5,9 @@ export interface Dataset {
 		| "importing_transaction"
 		| "importing_product_lookup"
 		| "importing_causal_lookup"
-		| "import_completed";
-	analysisStatus: "not_started" | "analyzing" | "analyzed";
+		| "import_completed"
+		| "import_failed";
+	analysisStatus: "not_started" | "analyzing" | "analyzed" | "analysis_failed";
 	createdAt: string;
 	updatedAt: string;
 	description?: string;

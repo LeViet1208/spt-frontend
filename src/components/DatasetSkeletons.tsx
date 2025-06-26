@@ -1,6 +1,7 @@
 import React from 'react'
 import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Spinner } from "@/components/ui/spinner" // Added Spinner import
 
 // Skeleton for the main datasets list page
 export function DatasetsListSkeleton() {
@@ -21,6 +22,12 @@ export function DatasetsListSkeleton() {
             {/* Refresh Button Skeleton */}
             <Skeleton className="h-10 w-20" />
 
+            {/* View Mode Toggle Skeleton */}
+            <div className="flex items-center gap-2">
+              <Skeleton className="size-9 rounded-md" />
+              <Skeleton className="size-9 rounded-md" />
+            </div>
+
             {/* Add Dataset Button Skeleton */}
             <Skeleton className="h-10 w-32" />
           </div>
@@ -33,40 +40,25 @@ export function DatasetsListSkeleton() {
           <Card key={index}>
             <CardContent className="p-6">
               {/* Main Dataset Information */}
-              <div className="flex items-start justify-between mb-4">
-                {/* Left side - Dataset info */}
-                <div className="flex items-start gap-4 flex-1">
-                  <Skeleton className="w-12 h-12 rounded-lg" />
-                  <div className="flex-1">
-                    <Skeleton className="h-6 w-48 mb-2" />
-                    <Skeleton className="h-4 w-96 mb-2" />
-                    <div className="flex items-center gap-2">
-                      <Skeleton className="h-4 w-4" />
-                      <Skeleton className="h-4 w-32" />
+              <div className="flex items-center gap-4">
+                <div className="w-5 h-5 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Skeleton className="h-5 w-5 rounded-lg" />
+                </div>
+                <div className="flex-1 flex flex-col">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Skeleton className="h-5 w-40" />
+                    <span className="text-muted-foreground">•</span>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Skeleton className="h-3 w-3" />
+                      <Skeleton className="h-3 w-24" />
                     </div>
                   </div>
+                  <Skeleton className="h-4 w-full mt-1" />
                 </div>
-
-                {/* Right side - Status */}
-                <div className="flex flex-col items-end gap-2">
-                  <Skeleton className="h-6 w-32" />
-                  <Skeleton className="h-6 w-24" />
-                </div>
-              </div>
-
-              {/* Dataset Files Section */}
-              <div className="pt-4 border-t">
-                <Skeleton className="h-5 w-24 mb-3" />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {[...Array(3)].map((_, fileIndex) => (
-                    <div key={fileIndex} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <Skeleton className="h-4 w-4" />
-                        <Skeleton className="h-4 w-24" />
-                      </div>
-                      <Skeleton className="h-6 w-20" />
-                    </div>
-                  ))}
+                {/* Status Indicator Skeleton */}
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="size-4 rounded-full" />
                 </div>
               </div>
             </CardContent>

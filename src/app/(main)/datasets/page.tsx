@@ -21,12 +21,16 @@ import {
   FileText,
   XCircle,
   ArrowLeft,
+  List, // Added for list view icon
+  Grid, // Added for grid view icon
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Progress } from "@/components/ui/progress" // Re-added Progress import
+import { Spinner } from "@/components/ui/spinner" // Added Spinner import
 import { DatasetsListSkeleton, DatasetDetailSkeleton, AddDatasetSkeleton } from "@/components/DatasetSkeletons"
 
 // Dynamically import components to avoid SSR issues
@@ -178,76 +182,44 @@ export default function DatasetsPage() {
     return <DatasetAddView />
   }
 
-  // Helper functions for rendering
-  const getStatusBadge = (dataset: Dataset) => {
-    if (dataset.importStatus === "import_completed") {
-      return <Badge variant="secondary" className="bg-green-50 text-green-700 hover:bg-green-100">
-        <CheckCircle className="h-3 w-3 mr-1" />
-        Import Completed
-      </Badge>
-    } else {
-      return <Badge variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
-        <Upload className="h-3 w-3 mr-1 animate-pulse" />
-        Importing...
-      </Badge>
-    }
-  }
+  // Helper function to determine dataset status and progress
+  const getDatasetStatusAndProgress = (dataset: Dataset) => {
+    let statusMessage: string
+    let progressValue: number
+    let isError = false;
 
-  const getAnalysisStatusBadge = (dataset: Dataset) => {
-    if (dataset.importStatus !== "import_completed") return null
-    
-    if (dataset.analysisStatus === "analyzed") {
-      return <Badge variant="secondary" className="bg-purple-50 text-purple-700 hover:bg-purple-100">
-        <BarChart className="h-3 w-3 mr-1" />
-        Analyzed
-      </Badge>
+    if (dataset.importStatus === "import_failed" || dataset.analysisStatus === "analysis_failed") {
+      statusMessage = "Error";
+      progressValue = 100; // Show full bar in red for error
+      isError = true;
+    } else if (dataset.importStatus === "importing_transaction") {
+      statusMessage = "Uploading Transactions";
+      progressValue = 25;
+    } else if (dataset.importStatus === "importing_product_lookup") {
+      statusMessage = "Uploading Products";
+      progressValue = 50;
+    } else if (dataset.importStatus === "importing_causal_lookup") {
+      statusMessage = "Uploading Causal Data";
+      progressValue = 75;
+    } else if (dataset.importStatus === "import_completed" && dataset.analysisStatus === "not_started") {
+      statusMessage = "Pending Analysis";
+      progressValue = 90;
     } else if (dataset.analysisStatus === "analyzing") {
-      return <Badge variant="secondary" className="bg-amber-50 text-amber-700 hover:bg-amber-100">
-        <Clock className="h-3 w-3 mr-1 animate-pulse" />
-        Analyzing...
-      </Badge>
+      statusMessage = "Analyzing";
+      progressValue = 95;
+    } else if (dataset.analysisStatus === "analyzed") {
+      statusMessage = "Analyzed";
+      progressValue = 100;
     } else {
-      return <Badge variant="outline">
-        <Clock className="h-3 w-3 mr-1" />
-        Pending Analysis
-      </Badge>
-    }
-  }
-
-  const getFileStatusBadge = (dataset: any, fileType: string) => {
-    let isUploaded = false
-    
-    switch (fileType) {
-      case "transaction":
-        isUploaded = ["importing_product_lookup", "importing_causal_lookup", "import_completed"].includes(dataset.importStatus)
-        break
-      case "product":
-        isUploaded = ["importing_causal_lookup", "import_completed"].includes(dataset.importStatus)
-        break
-      case "causal":
-        isUploaded = dataset.importStatus === "import_completed"
-        break
+      statusMessage = "Unknown Status";
+      progressValue = 0;
     }
 
-    const isCurrentlyUploading = dataset.importStatus === `importing_${fileType === "transaction" ? "transaction" : fileType === "product" ? "product_lookup" : "causal_lookup"}`
+    return { statusMessage, progressValue, isError };
+  };
 
-    if (isCurrentlyUploading) {
-      return <Badge variant="secondary" className="bg-blue-50 text-blue-600">
-        <Upload className="h-3 w-3 mr-1 animate-pulse" />
-        Uploading
-      </Badge>
-    } else if (isUploaded) {
-      return <Badge variant="secondary" className="bg-green-50 text-green-600">
-        <CheckCircle className="h-3 w-3 mr-1" />
-        Uploaded
-      </Badge>
-    } else {
-      return <Badge variant="outline" className="text-gray-500">
-        <XCircle className="h-3 w-3 mr-1" />
-        Not Uploaded
-      </Badge>
-    }
-  }
+  // State for view mode (list or grid)
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   // Render the main datasets list view
   return (
@@ -295,6 +267,27 @@ export default function DatasetsPage() {
             </Button>
 
             {/* Add Dataset Button */}
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant={viewMode === 'list' ? 'secondary' : 'outline'}
+                size="icon"
+                onClick={() => setViewMode('list')}
+                aria-label="List View"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'grid' ? 'secondary' : 'outline'}
+                size="icon"
+                onClick={() => setViewMode('grid')}
+                aria-label="Grid View"
+              >
+                <Grid className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Add Dataset Button */}
             <Button onClick={handleAddDataset} className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Add Dataset
@@ -310,8 +303,8 @@ export default function DatasetsPage() {
         </CardContent>
       </Card>
 
-      {/* Dataset List */}
-      <div className="space-y-4">
+      {/* Dataset List/Grid */}
+      <div className={viewMode === 'list' ? "space-y-4" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"}>
         {(!hasLoadedOnce || loading) ? (
           <DatasetsListSkeleton />
         ) : error ? (
@@ -335,94 +328,70 @@ export default function DatasetsPage() {
           </Card>
         ) : (
           <>
-            {filteredAndSortedDatasets.map((dataset) => (
-              <Card 
-                key={dataset.id} 
-                className="hover:shadow-md cursor-pointer transition-shadow duration-200"
-                onClick={() => handleDatasetClick(dataset)}
-              >
-                <CardContent className="p-6">
-                  {/* Main Dataset Information */}
-                  <div className="flex items-start justify-between mb-4">
-                    {/* Left side - Dataset info */}
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
-                        <Database className="h-6 w-6 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1">
-                        <CardTitle className="text-lg mb-1">{dataset.name}</CardTitle>
-                        {dataset.description && (
-                          <CardDescription className="mb-2 max-w-2xl">{dataset.description}</CardDescription>
+            {filteredAndSortedDatasets.map((dataset) => {
+              const { statusMessage, progressValue, isError } = getDatasetStatusAndProgress(dataset);
+              return (
+                <Card 
+                  key={dataset.id} 
+                  className="hover:shadow-md cursor-pointer transition-shadow duration-200"
+                  onClick={() => handleDatasetClick(dataset)}
+                >
+                  <CardContent>
+                    {/* Main Dataset Information */}
+                    <div className="flex flex-col">
+                      {/* Row 1: Name, Date Created, Description */}
+                      <div className="flex items-center gap-4">
+                        <div className="w-5 h-5 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Database className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1 flex flex-col">
+                          <div className="flex items-center gap-2 text-sm">
+                            <CardTitle className="text-base">{dataset.name}</CardTitle>
+                            <span className="text-muted-foreground">•</span>
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Calendar className="h-3 w-3" />
+                              <span>{new Date(dataset.createdAt || '').toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                          {dataset.description && (
+                            <CardDescription className="text-sm max-w-full line-clamp-1 mt-1">{dataset.description}</CardDescription>
+                          )}
+                        </div>
+                        {viewMode === 'list' && (
+                          <div className="flex items-center gap-2">
+                            <div className="text-xs font-medium text-muted-foreground">
+                              {statusMessage}
+                            </div>
+                            {progressValue === 100 && !isError ? (
+                              <CheckCircle className="h-4 w-4 text-chart-2" />
+                            ) : (
+                              <Spinner 
+                                size="sm" 
+                                color={isError ? "destructive" : "chart-3"} 
+                                shimmer={progressValue < 100 && !isError} 
+                              />
+                            )}
+                          </div>
                         )}
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Calendar className="h-4 w-4" />
-                          <span>Created {new Date(dataset.createdAt || '').toLocaleDateString()}</span>
+                      </div>
+
+                      {/* Row 2: Progress Bar (only for grid view) */}
+                      {viewMode === 'grid' && (
+                        <div className="flex flex-col">
+                          <div className="text-xs font-medium text-muted-foreground text-center my-2">
+                            {statusMessage}
+                          </div>
+                          <Progress
+                            value={progressValue}
+                            className={`h-2 ${isError ? 'bg-red-500' : ''}`}
+                          />
                         </div>
-                      </div>
+                      )}
                     </div>
-
-                    {/* Right side - Status */}
-                    <div className="flex flex-col items-end gap-2">
-                      {getStatusBadge(dataset)}
-                      {getAnalysisStatusBadge(dataset)}
-                    </div>
-                  </div>
-
-                  {/* Dataset Files Section */}
-                  <div className="pt-4 border-t">
-                    <h4 className="text-sm font-medium mb-3">Dataset Files</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      {/* Transaction Data */}
-                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm font-medium">Transaction Data</span>
-                        </div>
-                        {getFileStatusBadge(dataset, "transaction")}
-                      </div>
-
-                      {/* Product Lookup */}
-                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm font-medium">Product Lookup</span>
-                        </div>
-                        {getFileStatusBadge(dataset, "product")}
-                      </div>
-
-                      {/* Causal Lookup */}
-                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm font-medium">Causal Lookup</span>
-                        </div>
-                        {getFileStatusBadge(dataset, "causal")}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-
-            {/* Add Dataset Empty Card */}
-            {!debouncedSearchQuery.trim() && (
-              <Card 
-                className="hover:shadow-md cursor-pointer transition-shadow duration-200 border-dashed"
-                onClick={handleAddDataset}
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-center py-8">
-                    <div className="text-center">
-                      <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center mx-auto mb-4 hover:bg-muted/80 transition-colors">
-                        <Plus className="h-8 w-8 text-muted-foreground" />
-                      </div>
-                      <CardTitle className="text-lg mb-2">Add New Dataset</CardTitle>
-                      <CardDescription>Click here to upload and create a new dataset</CardDescription>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                  </CardContent>
+                </Card>
+              );
+            })}
 
             {/* Show empty state only when no datasets exist */}
             {filteredAndSortedDatasets.length === 0 && !debouncedSearchQuery.trim() && (

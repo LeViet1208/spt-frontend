@@ -21,6 +21,41 @@
   }
 }
 
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 3s infinite linear;
+}
+
+@keyframes shimmer-spinner {
+  0% {
+    border-top-color: transparent;
+  }
+  25% {
+    border-top-color: var(--color-chart-3);
+  }
+  50% {
+    border-top-color: transparent;
+  }
+  75% {
+    border-top-color: var(--color-chart-3);
+  }
+  100% {
+    border-top-color: transparent;
+  }
+}
+
+.animate-shimmer-spinner {
+  animation: shimmer-spinner 1.5s infinite linear;
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
