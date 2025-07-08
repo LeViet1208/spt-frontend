@@ -4,6 +4,9 @@ import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { AuthInitializer } from "@/components/AuthInitializer"
 import { ThemeProvider } from "@/components/ThemeProvider"
+import { NotificationProvider } from "@/components/NotificationProvider"
+import { ToastContainer } from "react-toastify"
+import "react-toastify/dist/ReactToastify.css"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,8 +32,22 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased font-sans`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <AuthInitializer />
-          {children}
+          <NotificationProvider>
+            <AuthInitializer />
+            {children}
+            <ToastContainer
+              position="top-right"
+              autoClose={5000}
+              hideProgressBar={false}
+              newestOnTop={false}
+              closeOnClick
+              rtl={false}
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+              theme="light"
+            />
+          </NotificationProvider>
         </ThemeProvider>
       </body>
     </html>

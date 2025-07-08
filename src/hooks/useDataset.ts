@@ -1,42 +1,31 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { AxiosError } from "axios";
-import { useToast } from "@/hooks/useToast";
+import { useNotifications } from "@/hooks/useNotifications";
 import { datasetService } from "@/utils/services/dataset";
-import {
-	Dataset,
-	CreateDatasetRequest,
-	CreateDatasetProgress,
-} from "@/utils/types/dataset";
-
-export type { CreateDatasetProgress };
+import { handleError } from "@/utils/errorHandler";
+import { Dataset, CreateDatasetRequest } from "@/utils/types/dataset";
 
 export const useDataset = () => {
-	const { showSuccessToast, showErrorToast } = useToast();
+	const { showSuccessNotification } = useNotifications();
 
 	const [datasets, setDatasets] = useState<Dataset[]>([]);
 	const [currentDataset, setCurrentDataset] = useState<Dataset | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	const handleError = useCallback(
-		(err: unknown, defaultMessage: string) => {
-			// Check if the error is a redirect signal from the API interceptor
-			if (err && typeof err === "object" && (err as any).isRedirect) {
-				console.log(
-					"Redirect initiated by API interceptor, suppressing error toast."
-				);
-				return; // Do not show toast or set error state if redirecting
-			}
+	const handleDatasetError = useCallback(
+		(err: unknown, defaultMessage: string, context?: string) => {
+			console.error(`Dataset ${context || "operation"} error:`, err);
 
-			console.error(err);
-			const axiosError = err as AxiosError<{ message?: string }>;
-			const message = axiosError?.response?.data?.message || defaultMessage;
-			setError(message);
-			showErrorToast(message);
+			// Use the centralized error handler
+			const processedError = handleError(err, context, {
+				defaultMessage,
+			});
+
+			setError(processedError.userMessage);
 		},
-		[showErrorToast]
+		[]
 	);
 
 	const fetchDatasets = useCallback(async () => {
@@ -47,17 +36,18 @@ export const useDataset = () => {
 			if (response.success && response.data) {
 				setDatasets(response.data);
 			} else {
-				handleError(
-					new Error(response.error),
-					response.error || "Failed to fetch datasets"
+				handleDatasetError(
+					new Error(response.error || "Failed to fetch datasets"),
+					response.error || "Failed to fetch datasets",
+					"fetch-datasets-response"
 				);
 			}
 		} catch (err) {
-			handleError(err, "Failed to fetch datasets");
+			handleDatasetError(err, "Failed to fetch datasets", "fetch-datasets");
 		} finally {
 			setIsLoading(false);
 		}
-	}, [handleError]);
+	}, [handleDatasetError]);
 
 	const fetchDataset = useCallback(
 		async (id: number) => {
@@ -69,62 +59,49 @@ export const useDataset = () => {
 					setCurrentDataset(response.data);
 					return response.data;
 				} else {
-					handleError(
-						new Error(response.error),
-						response.error || "Failed to fetch dataset"
+					handleDatasetError(
+						new Error(response.error || "Failed to fetch dataset"),
+						response.error || "Failed to fetch dataset",
+						"fetch-dataset-response"
 					);
 					return null;
 				}
 			} catch (err) {
-				handleError(err, "Failed to fetch dataset");
+				handleDatasetError(err, "Failed to fetch dataset", "fetch-dataset");
 				return null;
 			} finally {
 				setIsLoading(false);
 			}
 		},
-		[handleError]
+		[handleDatasetError]
 	);
 
 	const createDataset = useCallback(
-		async (
-			request: CreateDatasetRequest,
-			onProgress?: (progress: CreateDatasetProgress) => void
-		) => {
+		async (request: CreateDatasetRequest) => {
 			setIsLoading(true);
 			setError(null);
 			try {
 				// Step 1: Create dataset master
-				onProgress?.({
-					step: "creating_master",
-					progress: 10,
-					message: "Creating dataset...",
-				});
-
 				const masterResponse = await datasetService.createDatasetMaster({
 					name: request.name,
 					description: request.description,
 				});
 
-				if (!masterResponse.success || !masterResponse.data) {
-					handleError(
-						new Error(masterResponse.error),
-						masterResponse.error || "Failed to create dataset master"
+				if (!masterResponse.data) {
+					handleDatasetError(
+						new Error("Failed to create dataset master"),
+						"Failed to create dataset master",
+						"create-dataset-master"
 					);
 					return null;
 				}
 
 				const { datasetId, dataset } = masterResponse.data;
 
-				// Add new dataset to the list immediately
-				setDatasets((prev) => [dataset, ...prev]);
+				// Add new dataset to the list immediately with uploading status
+				setDatasets((prev) => [{ ...dataset, status: "uploading" }, ...prev]);
 
-				// Step 2: Upload transaction file
-				onProgress?.({
-					step: "uploading_transaction",
-					progress: 25,
-					message: "Uploading transaction file...",
-				});
-
+				// Upload all files
 				const transactionResponse = await datasetService.uploadTransactionFile({
 					datasetId,
 					file: request.files.transaction,
@@ -132,28 +109,15 @@ export const useDataset = () => {
 				});
 
 				if (!transactionResponse.success) {
-					handleError(
-						new Error(transactionResponse.error),
-						transactionResponse.error || "Failed to upload transaction file"
+					handleDatasetError(
+						new Error(
+							transactionResponse.error || "Failed to upload transaction file"
+						),
+						transactionResponse.error || "Failed to upload transaction file",
+						"upload-transaction"
 					);
 					return null;
 				}
-
-				// Update dataset status
-				setDatasets((prev) =>
-					prev.map((d) =>
-						d.id === datasetId
-							? { ...d, importStatus: "importing_product_lookup" as const }
-							: d
-					)
-				);
-
-				// Step 3: Upload product lookup file
-				onProgress?.({
-					step: "uploading_product_lookup",
-					progress: 50,
-					message: "Uploading product lookup file...",
-				});
 
 				const productResponse = await datasetService.uploadProductLookupFile({
 					datasetId,
@@ -162,28 +126,15 @@ export const useDataset = () => {
 				});
 
 				if (!productResponse.success) {
-					handleError(
-						new Error(productResponse.error),
-						productResponse.error || "Failed to upload product lookup file"
+					handleDatasetError(
+						new Error(
+							productResponse.error || "Failed to upload product lookup file"
+						),
+						productResponse.error || "Failed to upload product lookup file",
+						"upload-product-lookup"
 					);
 					return null;
 				}
-
-				// Update dataset status
-				setDatasets((prev) =>
-					prev.map((d) =>
-						d.id === datasetId
-							? { ...d, importStatus: "importing_causal_lookup" as const }
-							: d
-					)
-				);
-
-				// Step 4: Upload causal lookup file
-				onProgress?.({
-					step: "uploading_causal_lookup",
-					progress: 75,
-					message: "Uploading causal lookup file...",
-				});
 
 				const causalResponse = await datasetService.uploadCausalLookupFile({
 					datasetId,
@@ -192,38 +143,33 @@ export const useDataset = () => {
 				});
 
 				if (!causalResponse.success) {
-					handleError(
-						new Error(causalResponse.error),
-						causalResponse.error || "Failed to upload causal lookup file"
+					handleDatasetError(
+						new Error(
+							causalResponse.error || "Failed to upload causal lookup file"
+						),
+						causalResponse.error || "Failed to upload causal lookup file",
+						"upload-causal-lookup"
 					);
 					return null;
 				}
 
-				// Final update - mark as completed
+				// Update status to analyzing after all files are uploaded
 				setDatasets((prev) =>
 					prev.map((d) =>
-						d.id === datasetId
-							? { ...d, importStatus: "import_completed" as const }
-							: d
+						d.id === datasetId ? { ...d, status: "analyzing" as const } : d
 					)
 				);
 
-				onProgress?.({
-					step: "completed",
-					progress: 100,
-					message: "Dataset created successfully!",
-				});
-
-				showSuccessToast("Dataset created successfully!");
-				return dataset;
+				showSuccessNotification("Dataset created successfully!");
+				return { ...dataset, status: "analyzing" as const };
 			} catch (err) {
-				handleError(err, "Failed to create dataset");
+				handleDatasetError(err, "Failed to create dataset", "create-dataset");
 				return null;
 			} finally {
 				setIsLoading(false);
 			}
 		},
-		[handleError, showSuccessToast]
+		[handleDatasetError, showSuccessNotification]
 	);
 
 	const deleteDataset = useCallback(
@@ -237,23 +183,24 @@ export const useDataset = () => {
 					if (currentDataset?.id === id) {
 						setCurrentDataset(null);
 					}
-					showSuccessToast("Dataset deleted successfully!");
+					showSuccessNotification("Dataset deleted successfully!");
 					return true;
 				} else {
-					handleError(
-						new Error(response.error),
-						response.error || "Failed to delete dataset"
+					handleDatasetError(
+						new Error(response.error || "Failed to delete dataset"),
+						response.error || "Failed to delete dataset",
+						"delete-dataset"
 					);
 					return false;
 				}
 			} catch (err) {
-				handleError(err, "Failed to delete dataset");
+				handleDatasetError(err, "Failed to delete dataset", "delete-dataset");
 				return false;
 			} finally {
 				setIsLoading(false);
 			}
 		},
-		[handleError, showSuccessToast, currentDataset]
+		[handleDatasetError, showSuccessNotification, currentDataset]
 	);
 
 	const clearError = useCallback(() => {

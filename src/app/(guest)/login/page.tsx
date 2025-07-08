@@ -20,12 +20,12 @@ export default function SignInPage() {
   } = useAuthStore()
   const router = useRouter()
 
-  useEffect(() => {
-    if (firebaseUser && isAuthenticated && !authLoading) {
-      console.log("User authenticated, redirecting to dashboard...")
-      router.push("/dashboard")
-    }
-  }, [firebaseUser, isAuthenticated, authLoading, router])
+  // useEffect(() => {
+  //   if (firebaseUser && isAuthenticated && !authLoading) {
+  //     console.log("User authenticated, redirecting to dashboard...")
+  //     router.push("/dashboard")
+  //   }
+  // }, [firebaseUser, isAuthenticated, authLoading, router])
 
   const signInWithGoogle = async () => {
     try {

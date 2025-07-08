@@ -1,13 +1,7 @@
 export interface Dataset {
 	id: number;
 	name: string;
-	importStatus:
-		| "importing_transaction"
-		| "importing_product_lookup"
-		| "importing_causal_lookup"
-		| "import_completed"
-		| "import_failed";
-	analysisStatus: "not_started" | "analyzing" | "analyzed" | "analysis_failed";
+	status: "uploading" | "analyzing" | "completed" | "failed";
 	createdAt: string;
 	updatedAt: string;
 	description?: string;
@@ -23,29 +17,16 @@ export interface CreateDatasetRequest {
 	};
 }
 
-export interface CreateDatasetProgress {
-	step:
-		| "creating_master"
-		| "uploading_transaction"
-		| "uploading_product_lookup"
-		| "uploading_causal_lookup"
-		| "completed";
-	progress: number;
-	message: string;
-}
-
 export interface CreateDatasetMasterRequest {
 	name: string;
 	description?: string;
 }
 
-export interface CreateDatasetMasterResponse {
-	success: boolean;
-	data?: {
-		datasetId: number;
-		dataset: Dataset;
-	};
-	error?: string;
+// Updated payload types for standardized API responses
+export interface CreateDatasetMasterPayload {
+	dataset_id: number;
+	name: string;
+	description: string;
 }
 
 export interface UploadFileRequest {
@@ -54,20 +35,31 @@ export interface UploadFileRequest {
 	fileType: "transaction" | "product_lookup" | "causal_lookup";
 }
 
-export interface UploadFileResponse {
-	success: boolean;
-	data?: {
-		datasetId: number;
-		fileType: string;
-		status: string;
-	};
-	error?: string;
+export interface UploadFilePayload {
+	file_upload_id: number;
+	task_id: string;
 }
 
-export interface DatasetResponse {
-	success: boolean;
-	data?: Dataset[];
-	error?: string;
+export interface DatasetsListPayload {
+	user_id: string;
+	datasets: DatasetBackendResponse[];
+	total_datasets: number;
+}
+
+// Backend dataset response format
+export interface DatasetBackendResponse {
+	dataset_id: number;
+	name: string;
+	description?: string;
+	created_at: number;
+	status: "uploading" | "analyzing" | "completed" | "failed"; // Simplified status
+	campaigns_count: number;
+	metrics?: {
+		total_transactions: number;
+		unique_upcs: number;
+		unique_stores: number;
+		is_ready_for_training: boolean;
+	};
 }
 
 // Analytics types
@@ -138,10 +130,56 @@ export interface HistogramDataPoint {
 	count: number;
 }
 
-export interface DatasetAnalyticsResponse {
-	success: boolean;
-	data?: VariableStats;
-	error?: string;
+// Updated analytics payload types
+export type DatasetAnalyticsPayload = VariableStats;
+
+// Bivariate visualization types
+export interface BivariateVisualizationRequest {
+	table1: string;
+	variable1: string;
+	table2: string;
+	variable2: string;
+}
+
+export interface BivariateDataPoint {
+	x: number | string;
+	y: number | string;
+	count?: number;
+}
+
+export interface BivariateVisualizationPayload {
+	dataset_id: number;
+	analysis: {
+		variable1: {
+			name: string;
+			dataset: string;
+			type: "numerical" | "categorical";
+			description: string;
+			stats: any;
+		};
+		variable2: {
+			name: string;
+			dataset: string;
+			type: "numerical" | "categorical";
+			description: string;
+			stats: any;
+		};
+		relationship: {
+			data_points: number;
+			missing_data_pct: number;
+			correlation?: number;
+			correlation_p_value?: number;
+			correlation_strength?: string;
+		};
+	};
+	visualization: {
+		recommended_chart: string;
+		selected_chart: string;
+		alternatives: string[];
+		description: string;
+		plotly_config: any;
+	};
+	filters_applied: any;
 }
 
 export interface ColumnRequirement {

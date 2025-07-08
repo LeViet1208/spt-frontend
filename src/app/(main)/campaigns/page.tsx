@@ -71,10 +71,10 @@ export default function CampaignsPage() {
     try {
       setPromotionRulesLoading(prev => ({ ...prev, [campaignId]: true }))
       
-      const rules = await fetchPromotionRules(campaignId)
+      const response = await fetchPromotionRules(campaignId)
       
-      if (rules) {
-        setPromotionRules(prev => ({ ...prev, [campaignId]: rules }))
+      if (response && response.success && response.data) {
+        setPromotionRules(prev => ({ ...prev, [campaignId]: response.data! }))
       }
     } catch (err) {
       console.error("Error fetching promotion rules:", err)
@@ -155,7 +155,7 @@ export default function CampaignsPage() {
 
   // If we have an ID, show the detail view
   if (id) {
-    return <CampaignDetailView />
+    return <CampaignDetailView params={{ id }} />
   }
 
   // If view is new, show the create form
@@ -238,7 +238,7 @@ export default function CampaignsPage() {
             </Button>
 
             {/* Refresh Button */}
-            <Button
+            {/* <Button
               variant="outline"
               onClick={handleRefresh}
               disabled={campaignLoading}
@@ -246,7 +246,7 @@ export default function CampaignsPage() {
             >
               <RefreshCw className={`h-4 w-4 ${campaignLoading ? "animate-spin" : ""}`} />
               Refresh
-            </Button>
+            </Button> */}
 
             {/* Add Campaign Button */}
             <Button onClick={handleAddCampaign} className="flex items-center gap-2">
@@ -420,7 +420,7 @@ export default function CampaignsPage() {
             ))}
 
             {/* Add Campaign Empty Card */}
-            {!debouncedSearchQuery.trim() && (
+            {/* {!debouncedSearchQuery.trim() && (
               <Card 
                 className="hover:shadow-md cursor-pointer transition-shadow duration-200 border-dashed"
                 onClick={handleAddCampaign}
@@ -437,7 +437,7 @@ export default function CampaignsPage() {
                   </div>
                 </CardContent>
               </Card>
-            )}
+            )} */}
 
             {/* Show empty state only when no campaigns exist */}
             {filteredAndSortedCampaigns.length === 0 && !debouncedSearchQuery.trim() && (

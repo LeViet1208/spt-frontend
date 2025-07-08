@@ -32,10 +32,21 @@ export default function NewCampaignPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
+  // Fetch datasets when component mounts
+  useEffect(() => {
+    fetchDatasets()
+  }, [fetchDatasets])
+
   // Filter datasets to only show analyzed ones
   const availableDatasets = datasets.filter(
-    dataset => dataset.analysisStatus === "analyzed"
+    dataset => dataset.status === "completed"
   )
+
+  // Debug: Log what's happening in the component
+  console.log("Component - datasets:", datasets)
+  console.log("Component - availableDatasets:", availableDatasets)
+  console.log("Component - datasetsLoading:", datasetsLoading)
+  console.log("Component - datasetsError:", datasetsError)
 
   const handleBack = () => {
     router.push("/campaigns")
@@ -96,7 +107,7 @@ export default function NewCampaignPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card>
+      {/* <Card>
         <CardContent className="p-6">
           <div className="flex items-center gap-4">
             <Button
@@ -112,7 +123,7 @@ export default function NewCampaignPage() {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* Main Content */}
       <Card>
@@ -154,7 +165,7 @@ export default function NewCampaignPage() {
                 Dataset *
               </label>
               <CardDescription>
-                Select a dataset that has been analyzed. Only analyzed datasets can be used for campaigns.
+                Select a dataset that has been analyzed. Only completed datasets can be used for campaigns.
               </CardDescription>
 
               {datasetsLoading ? (
@@ -189,7 +200,7 @@ export default function NewCampaignPage() {
                     <Database className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                     <CardTitle className="text-lg mb-2">No analyzed datasets available</CardTitle>
                     <CardDescription className="mb-4">
-                      You need at least one analyzed dataset to create a campaign. 
+                      You need at least one completed dataset to create a campaign. 
                       Please upload and analyze a dataset first.
                     </CardDescription>
                     <Button
@@ -221,7 +232,7 @@ export default function NewCampaignPage() {
                             <p className="font-medium">{dataset.name}</p>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge variant="secondary" className="bg-purple-100 text-purple-700">
-                                Analyzed
+                                Completed
                               </Badge>
                               <span className="text-xs text-muted-foreground">
                                 Created {new Date(dataset.createdAt).toLocaleDateString()}

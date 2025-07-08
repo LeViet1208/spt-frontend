@@ -1,18 +1,28 @@
-import { api } from "@/utils/api";
+import { apiGet, apiPost } from "@/utils/api";
 import { auth } from "@/utils/firebase";
+import { ApiResult, isApiSuccess } from "@/utils/types/api";
+import { handleApiError } from "@/utils/errorHandler";
 import {
 	Dataset,
 	CreateDatasetMasterRequest,
-	CreateDatasetMasterResponse,
+	CreateDatasetMasterPayload,
 	UploadFileRequest,
-	UploadFileResponse,
-	DatasetResponse,
+	UploadFilePayload,
+	DatasetsListPayload,
+	DatasetBackendResponse,
 	VariableStats,
-	DatasetAnalyticsResponse,
+	DatasetAnalyticsPayload,
+	BivariateVisualizationPayload,
 } from "@/utils/types/dataset";
 
 export const datasetService = {
-	async getDatasets(): Promise<DatasetResponse> {
+	async getDatasets(): Promise<{
+		success: boolean;
+		data?: Dataset[];
+		error?: string;
+	}> {
+		// Ensure user is authenticated before making API call
+		await auth.authStateReady();
 		const user = auth.currentUser;
 		if (!user) {
 			return {
@@ -21,156 +31,306 @@ export const datasetService = {
 			};
 		}
 
-		const response = await api.get(`/users/${user.uid}/datasets`);
+		const result = await apiGet<DatasetsListPayload>(
+			`/users/${user.uid}/datasets`
+		);
 
-		// Transform backend response to match our Dataset interface
-		const transformedDatasets: Dataset[] =
-			response.data.datasets?.map((dataset: any) => ({
-				id: dataset.dataset_id,
-				name: dataset.name || `Dataset ${dataset.dataset_id}`,
-				description: dataset.description,
-				createdAt: new Date(dataset.created_at * 1000).toISOString(),
-				updatedAt: new Date(dataset.created_at * 1000).toISOString(),
-				importStatus: this.mapFileUploadsToImportStatus(dataset.file_uploads),
-				analysisStatus: this.mapTrainingToAnalysisStatus(
-					dataset.latest_training
-				),
-			})) || [];
+		if (isApiSuccess(result)) {
+			// Debug: Log the raw backend response
+			console.log("Backend datasets response:", result.payload);
 
-		return {
-			success: true,
-			data: transformedDatasets,
-		};
+			// Transform backend response to match our Dataset interface
+			const transformedDatasets: Dataset[] =
+				result.payload.datasets?.map((dataset: DatasetBackendResponse) => {
+					// Debug: Log each dataset transformation
+					console.log(`Transforming dataset ${dataset.dataset_id}:`, dataset);
+
+					const transformed = {
+						id: dataset.dataset_id,
+						name: dataset.name || `Dataset ${dataset.dataset_id}`,
+						description: dataset.description,
+						createdAt: new Date(dataset.created_at * 1000).toISOString(),
+						updatedAt: new Date(dataset.created_at * 1000).toISOString(),
+						status: dataset.status || "uploading", // Use simplified status from backend
+					};
+
+					console.log(
+						`Transformed dataset ${dataset.dataset_id}:`,
+						transformed
+					);
+					return transformed;
+				}) || [];
+
+			console.log("All transformed datasets:", transformedDatasets);
+			console.log(
+				"Completed datasets:",
+				transformedDatasets.filter((d) => d.status === "completed")
+			);
+
+			return {
+				success: true,
+				data: transformedDatasets,
+			};
+		} else {
+			// Error handling is already done by the error handler
+			return {
+				success: false,
+				error: result.message,
+			};
+		}
 	},
 
-	// Helper function to map file uploads to import status
-	mapFileUploadsToImportStatus(fileUploads: any): Dataset["importStatus"] {
-		if (!fileUploads) return "importing_transaction";
+	async createDatasetMaster(request: CreateDatasetMasterRequest): Promise<{
+		success: boolean;
+		data?: { datasetId: number; dataset: Dataset };
+		error?: string;
+	}> {
+		const result = await apiPost<CreateDatasetMasterPayload>("/datasets", {
+			name: request.name,
+			description: request.description,
+			// user_id is automatically added by the API interceptor
+		});
 
-		const { transactions, product_lookup, causal_lookup } = fileUploads;
+		if (isApiSuccess(result)) {
+			// Transform the response to match the expected format
+			const dataset: Dataset = {
+				id: result.payload.dataset_id,
+				name: result.payload.name,
+				description: result.payload.description,
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString(),
+				status: "uploading", // Use simplified status from backend
+			};
 
-		if (!transactions || transactions.status !== "completed") {
-			return "importing_transaction";
+			return {
+				success: true,
+				data: {
+					datasetId: result.payload.dataset_id,
+					dataset,
+				},
+			};
+		} else {
+			return {
+				success: false,
+				error: result.message,
+			};
 		}
-		if (!product_lookup || product_lookup.status !== "completed") {
-			return "importing_product_lookup";
-		}
-		if (!causal_lookup || causal_lookup.status !== "completed") {
-			return "importing_causal_lookup";
-		}
-
-		return "import_completed";
-	},
-
-	// Helper function to map training status to analysis status
-	mapTrainingToAnalysisStatus(latestTraining: any): Dataset["analysisStatus"] {
-		if (!latestTraining) return "not_started";
-
-		if (latestTraining.status === "completed") {
-			return "analyzed";
-		} else if (
-			latestTraining.status === "running" ||
-			latestTraining.status === "pending"
-		) {
-			return "analyzing";
-		}
-
-		return "not_started";
-	},
-
-	async createDatasetMaster(
-		request: CreateDatasetMasterRequest
-	): Promise<CreateDatasetMasterResponse> {
-		const response = await api.post("/datasets/master", request);
-		return response.data;
 	},
 
 	async uploadTransactionFile(
 		request: UploadFileRequest
-	): Promise<UploadFileResponse> {
+	): Promise<{ success: boolean; data?: any; error?: string }> {
 		const formData = new FormData();
-		formData.append("file", request.file);
-		formData.append("datasetId", request.datasetId.toString());
+		formData.append("transactions", request.file);
 
-		const response = await api.post("/datasets/upload/transaction", formData, {
-			headers: {
-				"Content-Type": "multipart/form-data",
-			},
-		});
-		return response.data;
+		// Add user_id to FormData since the interceptor can't handle FormData properly
+		const userId = localStorage.getItem("user_id");
+		if (userId) {
+			formData.append("user_id", userId);
+		}
+
+		const result = await apiPost<UploadFilePayload>(
+			`/datasets/${request.datasetId}/transactions`,
+			formData,
+			{
+				headers: {
+					"Content-Type": undefined, // Explicitly remove Content-Type to let browser set multipart/form-data
+				},
+			}
+		);
+
+		if (isApiSuccess(result)) {
+			return {
+				success: true,
+				data: {
+					datasetId: request.datasetId,
+					fileType: "transactions",
+					status: "uploaded",
+					file_upload_id: result.payload.file_upload_id,
+					task_id: result.payload.task_id,
+				},
+			};
+		} else {
+			return {
+				success: false,
+				error: result.message,
+			};
+		}
 	},
 
 	async uploadProductLookupFile(
 		request: UploadFileRequest
-	): Promise<UploadFileResponse> {
+	): Promise<{ success: boolean; data?: any; error?: string }> {
 		const formData = new FormData();
-		formData.append("file", request.file);
-		formData.append("datasetId", request.datasetId.toString());
+		formData.append("product_lookup", request.file);
 
-		const response = await api.post(
-			"/datasets/upload/product-lookup",
+		// Add user_id to FormData since the interceptor can't handle FormData properly
+		const userId = localStorage.getItem("user_id");
+		if (userId) {
+			formData.append("user_id", userId);
+		}
+
+		const result = await apiPost<UploadFilePayload>(
+			`/datasets/${request.datasetId}/productlookups`,
 			formData,
 			{
 				headers: {
-					"Content-Type": "multipart/form-data",
+					"Content-Type": undefined, // Explicitly remove Content-Type to let browser set multipart/form-data
 				},
 			}
 		);
-		return response.data;
+
+		if (isApiSuccess(result)) {
+			return {
+				success: true,
+				data: {
+					datasetId: request.datasetId,
+					fileType: "product_lookup",
+					status: "uploaded",
+					file_upload_id: result.payload.file_upload_id,
+					task_id: result.payload.task_id,
+				},
+			};
+		} else {
+			return {
+				success: false,
+				error: result.message,
+			};
+		}
 	},
 
 	async uploadCausalLookupFile(
 		request: UploadFileRequest
-	): Promise<UploadFileResponse> {
+	): Promise<{ success: boolean; data?: any; error?: string }> {
 		const formData = new FormData();
-		formData.append("file", request.file);
-		formData.append("datasetId", request.datasetId.toString());
+		formData.append("causal_lookup", request.file);
 
-		const response = await api.post(
-			"/datasets/upload/causal-lookup",
+		// Add user_id to FormData since the interceptor can't handle FormData properly
+		const userId = localStorage.getItem("user_id");
+		if (userId) {
+			formData.append("user_id", userId);
+		}
+
+		const result = await apiPost<UploadFilePayload>(
+			`/datasets/${request.datasetId}/causallookups`,
 			formData,
 			{
 				headers: {
-					"Content-Type": "multipart/form-data",
+					"Content-Type": undefined, // Explicitly remove Content-Type to let browser set multipart/form-data
 				},
 			}
 		);
-		return response.data;
+
+		if (isApiSuccess(result)) {
+			return {
+				success: true,
+				data: {
+					datasetId: request.datasetId,
+					fileType: "causal_lookup",
+					status: "uploaded",
+					file_upload_id: result.payload.file_upload_id,
+					task_id: result.payload.task_id,
+				},
+			};
+		} else {
+			return {
+				success: false,
+				error: result.message,
+			};
+		}
 	},
 
 	async getDatasetById(
 		id: number
 	): Promise<{ success: boolean; data?: Dataset; error?: string }> {
-		const response = await api.get(`/datasets/${id}`);
-		return response.data;
+		const result = await apiGet<Dataset>(`/datasets/${id}`);
+
+		if (isApiSuccess(result)) {
+			return {
+				success: true,
+				data: result.payload,
+			};
+		} else {
+			return {
+				success: false,
+				error: result.message,
+			};
+		}
 	},
 
 	async deleteDataset(
 		id: number
 	): Promise<{ success: boolean; error?: string }> {
-		const response = await api.delete(`/datasets/${id}`);
-		return response.data;
+		const result = await apiPost<null>(`/datasets/${id}`, null, {
+			method: "DELETE",
+		});
+
+		if (isApiSuccess(result)) {
+			return {
+				success: true,
+			};
+		} else {
+			return {
+				success: false,
+				error: result.message,
+			};
+		}
 	},
 
 	async getVariableStatistics(
 		datasetId: string,
 		table: string,
 		variable: string
-	): Promise<DatasetAnalyticsResponse> {
-		try {
-			const response = await api.get(
-				`/datasets/${datasetId}/${table}/${variable}`
-			);
+	): Promise<{ success: boolean; data?: VariableStats; error?: string }> {
+		const result = await apiGet<DatasetAnalyticsPayload>(
+			`/datasets/${datasetId}/${table}/${variable}`
+		);
+
+		if (isApiSuccess(result)) {
 			return {
 				success: true,
-				data: response.data,
+				data: result.payload,
 			};
-		} catch (error: any) {
+		} else {
 			return {
 				success: false,
-				error:
-					error.response?.data?.message ||
-					"Failed to fetch variable statistics",
+				error: result.message,
+			};
+		}
+	},
+
+	async getBivariateVisualization(
+		datasetId: string,
+		table1: string,
+		variable1: string,
+		table2: string,
+		variable2: string
+	): Promise<{
+		success: boolean;
+		data?: BivariateVisualizationPayload;
+		error?: string;
+	}> {
+		const result = await apiGet<BivariateVisualizationPayload>(
+			`/datasets/${datasetId}/visualizations/bivariate`,
+			{
+				params: {
+					table1,
+					variable1,
+					table2,
+					variable2,
+				},
+			}
+		);
+
+		if (isApiSuccess(result)) {
+			return {
+				success: true,
+				data: result.payload,
+			};
+		} else {
+			return {
+				success: false,
+				error: result.message,
 			};
 		}
 	},

@@ -127,23 +127,28 @@ export const useAuthStore = create<AuthStore>()(
 						);
 
 						if (!response.ok) {
-							if (response.status === 401) {
-								const errorData = await response.text();
-								if (errorData.includes("Invalid Firebase ID token")) {
-									throw new Error("Invalid Firebase ID token");
-								}
-							}
 							throw new Error(
 								`Backend authentication failed: ${response.status}`
 							);
 						}
 
-						const { access_token, user_id } = await response.json();
+						const data = await response.json();
 
-						// Store the tokens
+						// Check if the response has the expected structure
+						if (
+							!data.success ||
+							!data.payload?.access_token ||
+							!data.payload?.user_id
+						) {
+							throw new Error(
+								"Invalid response format from authentication endpoint"
+							);
+						}
+
+						// Store the tokens from the payload
 						const { setAccessToken, setUserId } = get();
-						setAccessToken(access_token);
-						setUserId(user_id);
+						setAccessToken(data.payload.access_token);
+						setUserId(data.payload.user_id);
 
 						// Store Firebase ID token in session storage for potential refresh
 						if (typeof window !== "undefined") {
@@ -157,20 +162,7 @@ export const useAuthStore = create<AuthStore>()(
 						if (error instanceof Error) {
 							errorMessage = error.message;
 						}
-
 						set({ error: errorMessage });
-
-						// If it's an invalid Firebase token error, clear auth and redirect
-						if (errorMessage.includes("Invalid Firebase ID token")) {
-							get().clearAuth();
-							if (
-								typeof window !== "undefined" &&
-								window.location.pathname !== "/signin"
-							) {
-								window.location.href = "/signin";
-							}
-						}
-
 						throw error;
 					} finally {
 						set({ isLoading: false });

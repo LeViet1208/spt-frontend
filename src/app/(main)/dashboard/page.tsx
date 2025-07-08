@@ -31,8 +31,8 @@ export default function DashboardPage() {
   }, [fetchDatasets, fetchAllCampaigns])
 
   // Calculate stats
-  const completedDatasets = datasets.filter(d => d.importStatus === 'import_completed').length
-  const analyzedDatasets = datasets.filter(d => d.analysisStatus === 'analyzed').length
+  const completedDatasets = datasets.filter(d => d.status === 'completed').length
+  const processingDatasets = datasets.filter(d => d.status === 'uploading' || d.status === 'analyzing').length
   const activeCampaigns = campaigns.filter(c => c.is_active).length
   const totalPromotionRules = campaigns.reduce((sum, c) => sum + c.promotion_rules_count, 0)
 
@@ -46,6 +46,22 @@ export default function DashboardPage() {
     .sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime())
     .slice(0, 3)
 
+  // Helper function to get status display info
+  const getStatusInfo = (dataset: Dataset) => {
+    switch (dataset.status) {
+      case 'completed':
+        return { text: 'Ready', className: 'bg-green-50 text-green-700', clickable: true }
+      case 'analyzing':
+        return { text: 'Analyzing', className: 'bg-blue-50 text-blue-700', clickable: false }
+      case 'uploading':
+        return { text: 'Uploading', className: 'bg-yellow-50 text-yellow-700', clickable: false }
+      case 'failed':
+        return { text: 'Failed', className: 'bg-red-50 text-red-700', clickable: false }
+      default:
+        return { text: 'Unknown', className: 'bg-gray-50 text-gray-700', clickable: false }
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Stats Overview */}
@@ -58,18 +74,18 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{datasets.length}</div>
             <p className="text-xs text-muted-foreground">
-              {completedDatasets} completed imports
+              {completedDatasets} ready, {processingDatasets} processing
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Analyzed Datasets</CardTitle>
+            <CardTitle className="text-sm font-medium">Ready Datasets</CardTitle>
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analyzedDatasets}</div>
+            <div className="text-2xl font-bold">{completedDatasets}</div>
             <p className="text-xs text-muted-foreground">
               Ready for insights
             </p>
@@ -128,7 +144,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center justify-between">
               <Button 
-                onClick={() => router.push('/dataset/add')}
+                onClick={() => router.push('/datasets?view=add')}
                 className="w-full"
               >
                 <Plus className="mr-2 h-4 w-4" />
@@ -140,26 +156,29 @@ export default function DashboardPage() {
               <div className="pt-4 border-t">
                 <h4 className="text-sm font-medium mb-2">Recent Datasets</h4>
                 <div className="space-y-2">
-                  {recentDatasets.map((dataset) => (
-                    <div 
-                      key={dataset.id}
-                      className="flex items-center justify-between p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted"
-                      onClick={() => dataset.importStatus === 'import_completed' && router.push(`/dataset/${dataset.id}`)}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{dataset.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(dataset.createdAt!).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <Badge 
-                        variant="secondary" 
-                        className={dataset.importStatus === 'import_completed' ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'}
+                  {recentDatasets.map((dataset) => {
+                    const statusInfo = getStatusInfo(dataset)
+                    return (
+                      <div 
+                        key={dataset.id}
+                        className={`flex items-center justify-between p-2 bg-muted/50 rounded ${statusInfo.clickable ? 'cursor-pointer hover:bg-muted' : 'cursor-default'}`}
+                        onClick={() => statusInfo.clickable && router.push(`/datasets?id=${dataset.id}`)}
                       >
-                        {dataset.importStatus === 'import_completed' ? 'Ready' : 'Processing'}
-                      </Badge>
-                    </div>
-                  ))}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{dataset.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(dataset.createdAt!).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <Badge 
+                          variant="secondary" 
+                          className={statusInfo.className}
+                        >
+                          {statusInfo.text}
+                        </Badge>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -189,7 +208,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center justify-between">
               <Button 
-                onClick={() => router.push('/campaign/new')}
+                onClick={() => router.push('/campaigns/new')}
                 className="w-full"
               >
                 <Plus className="mr-2 h-4 w-4" />
@@ -205,7 +224,7 @@ export default function DashboardPage() {
                     <div 
                       key={campaign.campaign_id}
                       className="flex items-center justify-between p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted"
-                      onClick={() => router.push(`/campaign/${campaign.campaign_id}`)}
+                      onClick={() => router.push(`/campaigns/${campaign.campaign_id}`)}
                     >
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{campaign.name}</p>

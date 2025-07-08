@@ -2,11 +2,12 @@
 
 import type React from "react"
 
-import { BarChart3, ArrowLeft, Upload, FileText, CheckCircle, AlertCircle } from "lucide-react"
+import { BarChart3, ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, Eye } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useEffect, useCallback } from "react"
 import { useDataset } from "@/hooks/useDataset"
-import type { CreateDatasetProgress, FileRequirement, ColumnRequirement } from "@/utils/types/dataset"
+import { useFileValidation } from "@/hooks/useFileValidation"
+import type { FileRequirement, ColumnRequirement } from "@/utils/types/dataset"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,6 +19,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { ValidationModal } from "@/components/validation/ValidationModal"
 
 // Define file requirements
 const fileRequirements: FileRequirement[] = [
@@ -26,15 +28,13 @@ const fileRequirements: FileRequirement[] = [
     name: "Transactions",
     description: "Contains all sales transactions with product and store information",
     requiredColumns: [
-      { name: "product_id", description: "Unique identifier for each product", example: "P123" },
-      { name: "price", description: "Selling price of the product", example: "10.99" },
-      { name: "time_of_transaction", description: "Timestamp of the transaction", example: "2023-01-15 14:30:00" },
-      { name: "week", description: "Week number of the transaction", example: "1" },
-      { name: "household_id", description: "Unique identifier for the household/customer", example: "H001" },
-      { name: "store_id", description: "Unique identifier for the store", example: "S001" },
-      { name: "basket_id", description: "Unique identifier for the shopping basket", example: "B1001" },
-      { name: "day", description: "Day of the week (e.g., Monday, Tuesday)", example: "Monday" },
-      { name: "coupon", description: "Indicates if a coupon was used (0 or 1)", example: "1" }
+      { name: "upc", description: "Universal Product Code for each product", example: "7680850106" },
+      { name: "sale_price", description: "Sale price of the product", example: "0.8" },
+      { name: "sale_quantity", description: "Number of units sold", example: "1" },
+      { name: "household_id", description: "Unique identifier for the household/customer", example: "125434" },
+      { name: "store_id", description: "Unique identifier for the store", example: "244" },
+      { name: "trip_id", description: "Unique identifier for the shopping trip", example: "1" },
+      { name: "time", description: "Timestamp of the transaction", example: "2020-01-02 11:00:00" }
     ],
     acceptedFormats: ["CSV", "Excel (.xlsx, .xls)"],
   },
@@ -43,11 +43,11 @@ const fileRequirements: FileRequirement[] = [
     name: "Products",
     description: "Contains product details and categorization",
     requiredColumns: [
-      { name: "product_id", description: "Unique identifier for each product", example: "P123" },
-      { name: "product_name", description: "Name of the product", example: "Premium Coffee" },
-      { name: "category", description: "Product category (e.g., Beverages, Snacks)", example: "Beverages" },
-      { name: "brand", description: "Brand of the product", example: "BrandA" },
-      { name: "size", description: "Size or quantity of the product", example: "250g" }
+      { name: "upc", description: "Universal Product Code for each product", example: "111112360" },
+      { name: "product_description", description: "Description of the product", example: "VINCENT S ORIG MARINARA S" },
+      { name: "category", description: "Product category", example: "pasta sauce" },
+      { name: "brand", description: "Brand of the product", example: "Vincent's" },
+      { name: "product_size", description: "Size or quantity of the product", example: "25.0" }
     ],
     acceptedFormats: ["CSV", "Excel (.xlsx, .xls)"],
   },
@@ -56,12 +56,12 @@ const fileRequirements: FileRequirement[] = [
     name: "Causal Data",
     description: "Contains promotion and campaign information",
     requiredColumns: [
-      { name: "product_id", description: "Unique identifier for each product", example: "P123" },
-      { name: "store_id", description: "Unique identifier for the store", example: "S001" },
-      { name: "week", description: "Week number when the promotion was active", example: "2" },
-      { name: "feature_desc", description: "Description of the feature (e.g., 'Display Ad', 'In-store Promo')", example: "Display Ad" },
-      { name: "display_desc", description: "Description of the display (e.g., 'End Cap', 'Shelf')", example: "End Cap" },
-      { name: "geography", description: "Geographical area of the promotion", example: "National" }
+      { name: "upc", description: "Universal Product Code for each product", example: "7680850108" },
+      { name: "store_id", description: "Unique identifier for the store", example: "1" },
+      { name: "start_time", description: "Start date of the promotion", example: "2021-04-19" },
+      { name: "end_time", description: "End date of the promotion", example: "2021-04-25 23:59:59" },
+      { name: "feature", description: "Feature flag (0 or 1)", example: "1" },
+      { name: "display", description: "Display flag (0 or 1)", example: "1" }
     ],
     acceptedFormats: ["CSV", "Excel (.xlsx, .xls)"],
   },
@@ -70,6 +70,7 @@ const fileRequirements: FileRequirement[] = [
 export default function AddDatasetPage() {
   const router = useRouter()
   const { createDataset } = useDataset()
+  const { validateFileData, isValidating, validationResult, clearValidation } = useFileValidation()
   const [currentStep, setCurrentStep] = useState(0)
   const [datasetName, setDatasetName] = useState("")
   const [datasetDescription, setDatasetDescription] = useState("")
@@ -80,7 +81,8 @@ export default function AddDatasetPage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const [uploadProgress, setUploadProgress] = useState<CreateDatasetProgress | null>(null)
+  const [showValidationModal, setShowValidationModal] = useState(false)
+  const [pendingFile, setPendingFile] = useState<{ file: File; fileId: string } | null>(null)
 
   const handleBack = useCallback(() => {
     if (currentStep === 0) {
@@ -99,13 +101,24 @@ export default function AddDatasetPage() {
     }
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0]
       const fileId = fileRequirements[currentStep].id
-      setFiles({
-        ...files,
-        [fileId]: e.target.files[0],
-      })
+      
+      // Store the pending file for validation
+      setPendingFile({ file, fileId })
+      
+      // Start validation
+      const result = await validateFileData(
+        file,
+        fileId as 'transaction' | 'product_lookup' | 'causal_lookup'
+      )
+      
+      if (result) {
+        // Show validation modal
+        setShowValidationModal(true)
+      }
     }
   }
 
@@ -124,20 +137,15 @@ export default function AddDatasetPage() {
       setIsSubmitting(true)
       setSubmitError(null)
       
-      const createdDataset = await createDataset(
-        {
-          name: datasetName,
-          description: datasetDescription,
-          files: {
-            transaction: files.transaction!,
-            product_lookup: files.product_lookup!,
-            causal_lookup: files.causal_lookup!,
-          },
+      const createdDataset = await createDataset({
+        name: datasetName,
+        description: datasetDescription,
+        files: {
+          transaction: files.transaction!,
+          product_lookup: files.product_lookup!,
+          causal_lookup: files.causal_lookup!,
         },
-        (progress) => {
-          setUploadProgress(progress)
-        }
-      )
+      })
 
       if (createdDataset) {
         // Navigate back to datasets after successful upload
@@ -145,17 +153,43 @@ export default function AddDatasetPage() {
           router.push("/datasets")
         }, 1500) // Give user time to see success message
       } else {
-        // Error handled by useDataset hook, just set local error state if needed
         setSubmitError("Failed to create dataset. Please check console for details.")
       }
 
     } catch (error) {
       console.error("Error creating dataset:", error)
       setSubmitError("An unexpected error occurred")
-      setUploadProgress(null)
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  // Validation modal handlers
+  const handleValidationProceed = () => {
+    if (pendingFile) {
+      setFiles({
+        ...files,
+        [pendingFile.fileId]: pendingFile.file,
+      })
+    }
+    setShowValidationModal(false)
+    setPendingFile(null)
+    clearValidation()
+  }
+
+  const handleValidationReject = () => {
+    setShowValidationModal(false)
+    setPendingFile(null)
+    clearValidation()
+    // Clear the file input
+    const input = document.getElementById('file-upload') as HTMLInputElement;
+    if (input) {
+      input.value = '';
+    }
+  }
+
+  const handleValidationClose = () => {
+    setShowValidationModal(false)
   }
 
   const renderStepIndicator = () => {
@@ -253,6 +287,31 @@ export default function AddDatasetPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      if (files[currentFile.id]) {
+                        const result = await validateFileData(
+                          files[currentFile.id]!,
+                          currentFile.id as 'transaction' | 'product_lookup' | 'causal_lookup'
+                        )
+                        if (result) {
+                          setPendingFile({ file: files[currentFile.id]!, fileId: currentFile.id })
+                          setShowValidationModal(true)
+                        }
+                      }
+                    }}
+                    className="flex items-center gap-1"
+                    disabled={isValidating}
+                  >
+                    {isValidating ? (
+                      <div className="h-3 w-3 animate-spin border border-current border-t-transparent rounded-full" />
+                    ) : (
+                      <Eye className="h-3 w-3" />
+                    )}
+                    Preview & Validate
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -413,6 +472,17 @@ export default function AddDatasetPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Validation Modal */}
+      <ValidationModal
+        isOpen={showValidationModal}
+        onClose={handleValidationClose}
+        validationResult={validationResult}
+        onProceed={handleValidationProceed}
+        onReject={handleValidationReject}
+        fileType={pendingFile?.fileId || ''}
+        isProcessing={isSubmitting}
+      />
     </div>
   )
 }

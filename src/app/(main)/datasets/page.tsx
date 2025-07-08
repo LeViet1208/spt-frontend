@@ -28,7 +28,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Progress } from "@/components/ui/progress" // Re-added Progress import
+
 import { Spinner } from "@/components/ui/spinner" // Added Spinner import
 import { DatasetsListSkeleton, DatasetDetailSkeleton, AddDatasetSkeleton } from "@/components/DatasetSkeletons"
 
@@ -137,15 +137,15 @@ export default function DatasetsPage() {
 
   // Handle dataset click
   const handleDatasetClick = (dataset: Dataset) => {
-    if (dataset.importStatus !== "import_completed") {
-      setToastMessage("Please wait for the dataset to finish uploading before accessing it.")
-      setShowToast(true)
-      setTimeout(() => setShowToast(false), 3000)
-      return
+    if (dataset.status !== "completed") {
+      setToastMessage("Please wait for the dataset to finish processing before accessing it.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+      return;
     }
     
     // Navigate to dataset detail page using search params
-    router.push(`/datasets?id=${dataset.id}`)
+    router.push(`/datasets?id=${dataset.id}`);
   }
 
   // Fetch datasets on mount
@@ -176,40 +176,30 @@ export default function DatasetsPage() {
     }
   }, [showToast])
 
-  // Helper function to determine dataset status and progress
+  // Helper function to determine dataset status (remove progress)
   const getDatasetStatusAndProgress = (dataset: Dataset) => {
-    let statusMessage: string
-    let progressValue: number
+    let statusMessage: string;
     let isError = false;
 
-    if (dataset.importStatus === "import_failed" || dataset.analysisStatus === "analysis_failed") {
-      statusMessage = "Error";
-      progressValue = 100; // Show full bar in red for error
-      isError = true;
-    } else if (dataset.importStatus === "importing_transaction") {
-      statusMessage = "Uploading Transactions";
-      progressValue = 25;
-    } else if (dataset.importStatus === "importing_product_lookup") {
-      statusMessage = "Uploading Products";
-      progressValue = 50;
-    } else if (dataset.importStatus === "importing_causal_lookup") {
-      statusMessage = "Uploading Causal Data";
-      progressValue = 75;
-    } else if (dataset.importStatus === "import_completed" && dataset.analysisStatus === "not_started") {
-      statusMessage = "Pending Analysis";
-      progressValue = 90;
-    } else if (dataset.analysisStatus === "analyzing") {
-      statusMessage = "Analyzing";
-      progressValue = 95;
-    } else if (dataset.analysisStatus === "analyzed") {
-      statusMessage = "Analyzed";
-      progressValue = 100;
-    } else {
-      statusMessage = "Unknown Status";
-      progressValue = 0;
+    switch (dataset.status) {
+      case "uploading":
+        statusMessage = "Uploading";
+        break;
+      case "analyzing":
+        statusMessage = "Analyzing";
+        break;
+      case "completed":
+        statusMessage = "Ready";
+        break;
+      case "failed":
+        statusMessage = "Error";
+        isError = true;
+        break;
+      default:
+        statusMessage = "Unknown";
     }
 
-    return { statusMessage, progressValue, isError };
+    return { statusMessage, isError };
   };
 
   // State for view mode (list or grid)
@@ -317,7 +307,7 @@ export default function DatasetsPage() {
             ) : (
               <>
                 {filteredAndSortedDatasets.map((dataset) => {
-                  const { statusMessage, progressValue, isError } = getDatasetStatusAndProgress(dataset);
+                  const { statusMessage, isError } = getDatasetStatusAndProgress(dataset);
                   return (
                     <Card 
                       key={dataset.id} 
@@ -350,29 +340,38 @@ export default function DatasetsPage() {
                                 <div className="text-xs font-medium text-muted-foreground">
                                   {statusMessage}
                                 </div>
-                                {progressValue === 100 && !isError ? (
+                                {statusMessage === "Ready" ? (
                                   <CheckCircle className="h-4 w-4 text-chart-2" />
+                                ) : dataset.status === "failed" ? (
+                                  <XCircle className="h-4 w-4 text-destructive" />
                                 ) : (
                                   <Spinner 
                                     size="sm" 
                                     color={isError ? "destructive" : "chart-3"} 
-                                    shimmer={progressValue < 100 && !isError} 
+                                    shimmer={dataset.status !== "completed" && !isError} 
                                   />
                                 )}
                               </div>
                             )}
                           </div>
 
-                          {/* Row 2: Progress Bar (only for grid view) */}
+                          {/* Row 2: Status display (only for grid view) */}
                           {viewMode === 'grid' && (
-                            <div className="flex flex-col">
-                              <div className="text-xs font-medium text-muted-foreground text-center my-2">
+                            <div className="flex items-center justify-center gap-2 mt-2">
+                              <div className="text-xs font-medium text-muted-foreground">
                                 {statusMessage}
                               </div>
-                              <Progress
-                                value={progressValue}
-                                className={`h-2 ${isError ? 'bg-red-500' : ''}`}
-                              />
+                              {statusMessage === "Ready" ? (
+                                <CheckCircle className="h-4 w-4 text-chart-2" />
+                              ) : dataset.status === "failed" ? (
+                                <XCircle className="h-4 w-4 text-destructive" />
+                              ) : (
+                                <Spinner 
+                                  size="sm" 
+                                  color={isError ? "destructive" : "chart-3"} 
+                                  shimmer={dataset.status !== "completed" && !isError} 
+                                />
+                              )}
                             </div>
                           )}
                         </div>

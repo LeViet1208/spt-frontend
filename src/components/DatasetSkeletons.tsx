@@ -72,46 +72,54 @@ export function DatasetsListSkeleton() {
 // Skeleton for dataset detail view
 export function DatasetDetailSkeleton() {
   return (
-    <div className="space-y-6">
-      {/* Header Skeleton */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center gap-4">
-            <Skeleton className="h-10 w-10" />
-            <div>
-              <Skeleton className="h-8 w-48 mb-2" />
-              <Skeleton className="h-4 w-64" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="flex flex-col lg:flex-row gap-6">
+      {/* Left Column: Charts Skeleton */}
+      <div className="flex-1 space-y-6">
+        {/* Chart Selection Buttons Skeleton */}
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          <Skeleton className="h-10 w-40" />
+          <Skeleton className="h-10 w-28" />
+          <Skeleton className="h-10 w-28" />
+        </div>
 
-      {/* Variable Selection Skeleton */}
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-36 mb-2" />
-          <Skeleton className="h-4 w-80" />
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Skeleton className="h-4 w-32 mb-2" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-            <div>
-              <Skeleton className="h-4 w-24 mb-2" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          </div>
-          <div className="flex items-center gap-2 mt-4">
-            <Skeleton className="h-4 w-8" />
-            <Skeleton className="h-6 w-20" />
-          </div>
-        </CardContent>
-      </Card>
+        {/* Chart Skeleton */}
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-32 mb-2" />
+            <Skeleton className="h-4 w-48" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="w-full h-[300px] rounded" />
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Statistics Cards Skeleton */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Right Column: Variable Selection & Statistics Skeleton */}
+      <div className="w-full lg:w-1/3 space-y-6">
+        {/* Variable Selection Skeleton */}
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-36 mb-2" />
+            <Skeleton className="h-4 w-80" />
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <Skeleton className="h-4 w-32 mb-2" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <div>
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </div>
+            <div className="flex items-center gap-2 mt-4">
+              <Skeleton className="h-4 w-8" />
+              <Skeleton className="h-6 w-20" />
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Descriptive Statistics Skeleton */}
         <Card>
           <CardHeader>
@@ -139,50 +147,7 @@ export function DatasetDetailSkeleton() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Chart/Summary Skeleton */}
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-32 mb-2" />
-            <Skeleton className="h-4 w-48" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="w-full h-[300px] rounded" />
-          </CardContent>
-        </Card>
       </div>
-
-      {/* Histogram Skeleton */}
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-24 mb-2" />
-          <Skeleton className="h-4 w-40" />
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="w-full h-[300px] rounded" />
-        </CardContent>
-      </Card>
-
-      {/* Box Plot Skeleton */}
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-20 mb-2" />
-          <Skeleton className="h-4 w-56" />
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="w-full h-[300px] rounded mb-4" />
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex justify-between">
-              <Skeleton className="h-4 w-8" />
-              <Skeleton className="h-4 w-12" />
-            </div>
-            <div className="flex justify-between">
-              <Skeleton className="h-4 w-12" />
-              <Skeleton className="h-4 w-12" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

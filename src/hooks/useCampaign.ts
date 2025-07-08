@@ -1,18 +1,19 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { AxiosError } from "axios";
-import { useToast } from "@/hooks/useToast";
+import { useNotifications } from "@/hooks/useNotifications";
 import { campaignService } from "@/utils/services/campaign";
+import { handleError } from "@/utils/errorHandler";
 import {
 	Campaign,
 	CreateCampaignRequest,
 	PromotionRule,
 	CreatePromotionRuleRequest,
+	PromotionRuleValidationResult,
 } from "@/utils/types/campaign";
 
 export const useCampaign = () => {
-	const { showSuccessToast, showErrorToast } = useToast();
+	const { showSuccessNotification } = useNotifications();
 
 	const [campaigns, setCampaigns] = useState<{
 		[datasetId: number]: Campaign[];
@@ -25,15 +26,18 @@ export const useCampaign = () => {
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	const handleError = useCallback(
-		(err: unknown, defaultMessage: string) => {
-			console.error(err);
-			const axiosError = err as AxiosError<{ message?: string }>;
-			const message = axiosError?.response?.data?.message || defaultMessage;
-			setError(message);
-			showErrorToast(message);
+	const handleCampaignError = useCallback(
+		(err: unknown, defaultMessage: string, context?: string) => {
+			console.error(`Campaign ${context || "operation"} error:`, err);
+
+			// Use the centralized error handler
+			const processedError = handleError(err, context, {
+				defaultMessage,
+			});
+
+			setError(processedError.userMessage);
 		},
-		[showErrorToast]
+		[]
 	);
 
 	const fetchCampaignsByDataset = useCallback(
@@ -45,13 +49,18 @@ export const useCampaign = () => {
 				if (response.success && response.data) {
 					setCampaigns((prev) => ({ ...prev, [datasetId]: response.data! }));
 				} else {
-					handleError(
-						new Error(response.error),
-						response.error || "Failed to fetch campaigns"
+					handleCampaignError(
+						new Error(response.error || "Failed to fetch campaigns"),
+						response.error || "Failed to fetch campaigns",
+						"fetch-campaigns-by-dataset"
 					);
 				}
 			} catch (err) {
-				handleError(err, "Failed to fetch campaigns");
+				handleCampaignError(
+					err,
+					"Failed to fetch campaigns",
+					"fetch-campaigns-by-dataset"
+				);
 			} finally {
 				setIsLoading(false);
 			}
@@ -66,18 +75,20 @@ export const useCampaign = () => {
 			const response = await campaignService.getAllCampaigns();
 			if (response.success && response.data) {
 				setAllCampaigns(response.data);
+				return response;
 			} else {
-				handleError(
-					new Error(response.error),
-					response.error || "Failed to fetch all campaigns"
-				);
+				const errorMessage = response.error || "Failed to fetch all campaigns";
+				setError(errorMessage);
+				return { success: false, error: errorMessage };
 			}
 		} catch (err) {
-			handleError(err, "Failed to fetch all campaigns");
+			const errorMessage = "Failed to fetch all campaigns";
+			handleCampaignError(err, errorMessage, "fetch-all-campaigns");
+			return { success: false, error: errorMessage };
 		} finally {
 			setIsLoading(false);
 		}
-	}, [handleError]);
+	}, [handleCampaignError]);
 
 	const createCampaign = useCallback(
 		async (request: CreateCampaignRequest) => {
@@ -99,23 +110,28 @@ export const useCampaign = () => {
 					// Update all campaigns
 					setAllCampaigns((prev) => [campaign, ...prev]);
 
-					showSuccessToast("Campaign created successfully!");
+					showSuccessNotification("Campaign created successfully!");
 					return campaign;
 				} else {
-					handleError(
+					handleCampaignError(
 						new Error(response.error),
-						response.error || "Failed to create campaign"
+						response.error || "Failed to create campaign",
+						"create-campaign"
 					);
 					return null;
 				}
 			} catch (err) {
-				handleError(err, "Failed to create campaign");
+				handleCampaignError(
+					err,
+					"Failed to create campaign",
+					"create-campaign"
+				);
 				return null;
 			} finally {
 				setIsLoading(false);
 			}
 		},
-		[handleError, showSuccessToast]
+		[handleCampaignError, showSuccessNotification]
 	);
 
 	const fetchPromotionRules = useCallback(
@@ -129,22 +145,22 @@ export const useCampaign = () => {
 						...prev,
 						[campaignId]: response.data!,
 					}));
-					return response.data;
+					return response;
 				} else {
-					handleError(
-						new Error(response.error),
-						response.error || "Failed to fetch promotion rules"
-					);
-					return null;
+					const errorMessage =
+						response.error || "Failed to fetch promotion rules";
+					setError(errorMessage);
+					return { success: false, error: errorMessage };
 				}
 			} catch (err) {
-				handleError(err, "Failed to fetch promotion rules");
-				return null;
+				const errorMessage = "Failed to fetch promotion rules";
+				handleCampaignError(err, errorMessage, "fetch-promotion-rules");
+				return { success: false, error: errorMessage };
 			} finally {
 				setIsLoading(false);
 			}
 		},
-		[handleError]
+		[handleCampaignError]
 	);
 
 	const createPromotionRule = useCallback(
@@ -167,23 +183,56 @@ export const useCampaign = () => {
 							: [promotionRule],
 					}));
 
-					showSuccessToast("Promotion rule created successfully!");
+					showSuccessNotification("Promotion rule created successfully!");
 					return promotionRule;
 				} else {
-					handleError(
+					handleCampaignError(
 						new Error(response.error),
-						response.error || "Failed to create promotion rule"
+						response.error || "Failed to create promotion rule",
+						"create-promotion-rule"
 					);
 					return null;
 				}
 			} catch (err) {
-				handleError(err, "Failed to create promotion rule");
+				handleCampaignError(
+					err,
+					"Failed to create promotion rule",
+					"create-promotion-rule"
+				);
 				return null;
 			} finally {
 				setIsLoading(false);
 			}
 		},
-		[handleError, showSuccessToast]
+		[handleCampaignError, showSuccessNotification]
+	);
+
+	const validatePromotionRule = useCallback(
+		async (
+			campaignId: number,
+			request: Omit<CreatePromotionRuleRequest, "name">
+		) => {
+			setError(null);
+			try {
+				const response = await campaignService.validatePromotionRule(
+					campaignId,
+					request
+				);
+				if (response.success && response.data) {
+					return response.data;
+				} else {
+					const errorMessage =
+						response.error || "Failed to validate promotion rule";
+					setError(errorMessage);
+					return null;
+				}
+			} catch (err) {
+				const errorMessage = "Failed to validate promotion rule";
+				handleCampaignError(err, errorMessage, "validate-promotion-rule");
+				return null;
+			}
+		},
+		[handleCampaignError]
 	);
 
 	const getCampaignsForDataset = useCallback(
@@ -241,6 +290,7 @@ export const useCampaign = () => {
 		createCampaign,
 		fetchPromotionRules,
 		createPromotionRule,
+		validatePromotionRule,
 
 		// Helper methods
 		getCampaignsForDataset,

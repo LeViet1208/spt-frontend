@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { useToast } from "@/hooks/useToast";
+import { useNotifications } from "@/hooks/useNotifications";
 import { datasetService } from "@/utils/services/dataset";
 import {
 	VariableStats,
@@ -26,20 +26,12 @@ export const CHILD_TABLES: ChildTable[] = [
 export const VARIABLES_BY_TABLE: { [key: string]: Variable[] } = {
 	transactions: [
 		{ key: "upc", label: "UPC", type: "categorical" },
-		{ key: "dollar_sales", label: "Dollar Sales", type: "numerical" },
-		{ key: "units", label: "Unit Sales", type: "numerical" },
-		{
-			key: "time_of_transaction",
-			label: "Time of Transaction",
-			type: "categorical",
-		},
-		{ key: "day", label: "Day", type: "categorical" },
-		{ key: "week", label: "Week", type: "categorical" },
-		{ key: "store", label: "Store", type: "categorical" },
-		{ key: "geography", label: "Geography", type: "categorical" },
-		{ key: "basket", label: "Basket", type: "categorical" },
-		{ key: "household", label: "Household", type: "categorical" },
-		{ key: "coupon", label: "Coupon", type: "categorical" },
+		{ key: "sale_price", label: "Sale Price", type: "numerical" },
+		{ key: "sale_quantity", label: "Sale Quantity", type: "numerical" },
+		{ key: "household_id", label: "Household ID", type: "categorical" },
+		{ key: "store_id", label: "Store ID", type: "categorical" },
+		{ key: "trip_id", label: "Trip ID", type: "categorical" },
+		{ key: "time", label: "Time", type: "categorical" },
 	],
 	productlookups: [
 		{ key: "upc", label: "UPC", type: "categorical" },
@@ -48,25 +40,25 @@ export const VARIABLES_BY_TABLE: { [key: string]: Variable[] } = {
 			label: "Product Description",
 			type: "categorical",
 		},
-		{ key: "commodity", label: "Commodity", type: "categorical" },
+		{ key: "category", label: "Category", type: "categorical" },
 		{ key: "brand", label: "Brand", type: "categorical" },
 		{ key: "product_size", label: "Product Size", type: "numerical" },
 	],
 	causallookups: [
 		{ key: "upc", label: "UPC", type: "categorical" },
-		{ key: "week", label: "Week", type: "categorical" },
-		{ key: "store", label: "Store", type: "categorical" },
-		{ key: "geography", label: "Geography", type: "categorical" },
-		{ key: "feature_desc", label: "Feature", type: "categorical" },
-		{ key: "display_desc", label: "Display", type: "categorical" },
+		{ key: "store_id", label: "Store ID", type: "categorical" },
+		{ key: "start_time", label: "Start Time", type: "categorical" },
+		{ key: "end_time", label: "End Time", type: "categorical" },
+		{ key: "feature", label: "Feature", type: "categorical" },
+		{ key: "display", label: "Display", type: "categorical" },
 	],
 };
 
 export const useDatasetAnalytics = (datasetId?: string) => {
-	const { showErrorToast } = useToast();
+	const { showErrorNotification } = useNotifications();
 
 	const [selectedTable, setSelectedTable] = useState("transactions");
-	const [selectedVariable, setSelectedVariable] = useState("week");
+	const [selectedVariable, setSelectedVariable] = useState("upc");
 	const [variableStats, setVariableStats] = useState<VariableStats | null>(
 		null
 	);
@@ -108,19 +100,19 @@ export const useDatasetAnalytics = (datasetId?: string) => {
 					const errorMessage =
 						response.error || "Failed to fetch variable statistics";
 					setError(errorMessage);
-					showErrorToast(errorMessage);
+					showErrorNotification(errorMessage);
 					setVariableStats(null);
 				}
 			} catch (err) {
 				const errorMessage = "Failed to fetch variable statistics";
 				setError(errorMessage);
-				showErrorToast(errorMessage);
+				showErrorNotification(errorMessage);
 				setVariableStats(null);
 			} finally {
 				setIsLoading(false);
 			}
 		},
-		[datasetId, showErrorToast]
+		[datasetId, showErrorNotification]
 	);
 
 	// Process API data for display
@@ -157,7 +149,7 @@ export const useDatasetAnalytics = (datasetId?: string) => {
 			const top10 = sortedEntries.slice(0, 10);
 			const remaining = sortedEntries.slice(10);
 
-			let pieData = top10.map(([key, value]) => ({ name: key, value }));
+			const pieData = top10.map(([key, value]) => ({ name: key, value }));
 
 			// Add "Others" category if there are more than 10 items
 			if (remaining.length > 0) {
@@ -229,7 +221,7 @@ export const useDatasetAnalytics = (datasetId?: string) => {
 		setVariableStats(null);
 		setError(null);
 		setSelectedTable("transactions");
-		setSelectedVariable("week");
+		setSelectedVariable("upc");
 	}, []);
 
 	return {

@@ -7,18 +7,19 @@ import { useTheme } from "next-themes"
 import { signOut } from "firebase/auth"
 import { auth } from "@/utils/firebase"
 import { useAuthStore } from "@/hooks/stores/useAuthStore"
-import { 
-  BarChart3, 
-  User, 
-  Database, 
-  Megaphone, 
-  Settings, 
-  Moon, 
+import {
+  BarChart3,
+  User,
+  Database,
+  Megaphone,
+  Settings,
+  Moon,
   Sun,
   Home,
   LogOut,
   PanelLeft,
-  PanelLeftClose
+  PanelLeftClose,
+  TrendingUp
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -62,30 +63,36 @@ export default function Sidebar({ className }: SidebarProps) {
   }
 
   const navigationItems = [
-    { 
-      id: "dashboard", 
-      label: "Dashboard", 
+    {
+      id: "dashboard",
+      label: "Dashboard",
       icon: Home,
       href: "/dashboard"
     },
-    { 
-      id: "datasets", 
-      label: "Datasets", 
+    {
+      id: "datasets",
+      label: "Datasets",
       icon: Database,
       href: "/datasets"
     },
-    { 
-      id: "campaigns", 
-      label: "Campaigns", 
+    {
+      id: "campaigns",
+      label: "Campaigns",
       icon: Megaphone,
       href: "/campaigns"
     },
-    { 
-      id: "settings", 
-      label: "Settings", 
-      icon: Settings,
-      href: "/settings"
+    {
+      id: "analytics",
+      label: "Analytics",
+      icon: TrendingUp,
+      href: "/analytics/demand-decomposition"
     },
+    // {
+    //   id: "settings",
+    //   label: "Settings",
+    //   icon: Settings,
+    //   href: "/settings"
+    // },
   ]
 
   const isActiveRoute = (href: string) => {
