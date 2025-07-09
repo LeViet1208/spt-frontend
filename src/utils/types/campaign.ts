@@ -15,10 +15,10 @@ export interface Campaign {
 }
 
 export type RuleType =
-	| "price_reduction"
-	| "product_size_increase"
-	| "feature_yes_no"
-	| "display_yes_no";
+	| "discount"
+	| "upsizing"
+	| "to_be_featured"
+	| "to_be_displayed";
 
 export type TargetType = "category" | "brand" | "upc";
 
@@ -97,3 +97,46 @@ export interface PromotionRuleValidationResult {
 	};
 	error?: string;
 }
+
+// Dataset validation options for promotion rule creation
+export interface DatasetValidationOptions {
+	dataset_id: number;
+	last_updated: string | null;
+	date_range: {
+		min_date: string | null;
+		max_date: string | null;
+	};
+	categories: string[];
+	brands: string[];
+	upcs: string[];
+	pagination?: {
+		page: number;
+		limit: number;
+		total: number;
+		has_next: boolean;
+	};
+	summary?: {
+		total_categories: number;
+		total_brands: number;
+		total_upcs: number;
+	};
+}
+
+// Enhanced form data types for the new UI requirements
+export interface PromotionRuleFormDataEnhanced extends PromotionRuleFormData {
+	// For discount rule type
+	discount_type?: "percentage" | "amount";
+	discount_value?: number;
+
+	// For upsizing rule type
+	upsizing_type?: "percentage" | "amount";
+	upsizing_value?: number;
+}
+
+// Rule type display names mapping
+export const RuleTypeDisplayNames: Record<RuleType, string> = {
+	discount: "Discount",
+	upsizing: "Upsizing",
+	to_be_featured: "To Be Featured",
+	to_be_displayed: "To Be Displayed",
+};

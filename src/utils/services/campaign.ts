@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut } from "@/utils/api";
+import { apiGet, apiPost, apiPut, apiDelete } from "@/utils/api";
 import { auth } from "@/utils/firebase";
 import { ApiResult, isApiSuccess } from "@/utils/types/api";
 import { handleApiError } from "@/utils/errorHandler";
@@ -8,6 +8,7 @@ import {
 	CreateCampaignRequest,
 	CreatePromotionRuleRequest,
 	PromotionRuleValidationResult,
+	DatasetValidationOptions,
 	RuleType,
 	TargetType,
 } from "@/utils/types/campaign";
@@ -257,6 +258,114 @@ export const campaignService = {
 		const result = await apiPost<PromotionRuleValidationResult>(
 			`/campaigns/${campaignId}/promotionrules/validate`,
 			request
+		);
+
+		if (isApiSuccess(result)) {
+			return {
+				success: true,
+				data: result.payload,
+			};
+		} else {
+			return {
+				success: false,
+				error: result.message,
+			};
+		}
+	},
+
+	async getDatasetValidationOptions(
+		datasetId: number,
+		options?: {
+			targetType?: string;
+			search?: string;
+			page?: number;
+			limit?: number;
+		}
+	): Promise<{
+		success: boolean;
+		data?: DatasetValidationOptions;
+		error?: string;
+	}> {
+		const params = new URLSearchParams();
+		if (options?.targetType) params.append("target_type", options.targetType);
+		if (options?.search) params.append("search", options.search);
+		if (options?.page) params.append("page", options.page.toString());
+		if (options?.limit) params.append("limit", options.limit.toString());
+
+		const queryString = params.toString();
+		const url = `/datasets/${datasetId}/validationoptions${
+			queryString ? `?${queryString}` : ""
+		}`;
+
+		const result = await apiGet<DatasetValidationOptions>(url);
+
+		if (isApiSuccess(result)) {
+			return {
+				success: true,
+				data: result.payload,
+			};
+		} else {
+			return {
+				success: false,
+				error: result.message,
+			};
+		}
+	},
+
+	async getPromotionRule(
+		campaignId: number,
+		ruleId: number
+	): Promise<{ success: boolean; data?: PromotionRule; error?: string }> {
+		const result = await apiGet<PromotionRule>(
+			`/campaigns/${campaignId}/promotionrules/${ruleId}`
+		);
+
+		if (isApiSuccess(result)) {
+			return {
+				success: true,
+				data: result.payload,
+			};
+		} else {
+			return {
+				success: false,
+				error: result.message,
+			};
+		}
+	},
+
+	async updatePromotionRule(
+		campaignId: number,
+		ruleId: number,
+		request: CreatePromotionRuleRequest
+	): Promise<{ success: boolean; data?: PromotionRule; error?: string }> {
+		const result = await apiPut<PromotionRule>(
+			`/campaigns/${campaignId}/promotionrules/${ruleId}`,
+			request
+		);
+
+		if (isApiSuccess(result)) {
+			return {
+				success: true,
+				data: result.payload,
+			};
+		} else {
+			return {
+				success: false,
+				error: result.message,
+			};
+		}
+	},
+
+	async deletePromotionRule(
+		campaignId: number,
+		ruleId: number
+	): Promise<{
+		success: boolean;
+		data?: { promotion_rule_id: number; name: string };
+		error?: string;
+	}> {
+		const result = await apiDelete<{ promotion_rule_id: number; name: string }>(
+			`/campaigns/${campaignId}/promotionrules/${ruleId}`
 		);
 
 		if (isApiSuccess(result)) {

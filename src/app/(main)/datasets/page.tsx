@@ -358,8 +358,8 @@ export default function DatasetsPage() {
                           /* Grid View Layout */
                           <div className="flex items-center gap-6">
                             {/* Icon on the left */}
-                            <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                              <Database className="h-5 w-5 text-muted-foreground" />
+                            <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                              <Database className="h-8 w-8 text-muted-foreground" />
                             </div>
                             
                             {/* Vertical column of information */}

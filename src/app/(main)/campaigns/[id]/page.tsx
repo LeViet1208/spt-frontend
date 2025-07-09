@@ -11,6 +11,8 @@ import {
   Target,
   Trash2,
   AlertCircle,
+  List,
+  Grid,
 } from "lucide-react"
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
@@ -18,6 +20,7 @@ import { useCampaign } from "@/hooks/useCampaign"
 import { useNotifications } from "@/hooks/useNotifications"
 import { PromotionRuleForm } from "@/components/PromotionRuleForm"
 import { EditCampaignModal } from "@/components/EditCampaignModal"
+import { EditPromotionRuleModal } from "@/components/EditPromotionRuleModal"
 import type { Campaign, PromotionRule } from "@/utils/types/campaign"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -36,7 +39,7 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
   const { showInfoNotification } = useNotifications()
 
   // Campaign hook
-  const { fetchAllCampaigns, fetchPromotionRules } = useCampaign()
+  const { fetchAllCampaigns, fetchPromotionRules, deletePromotionRule } = useCampaign()
 
   // Local state
   const [campaign, setCampaign] = useState<Campaign | null>(null)
@@ -45,6 +48,9 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
   const [rulesLoading, setRulesLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [rulesError, setRulesError] = useState<string | null>(null)
+
+  // State for view mode (list or grid)
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
 
   // Fetch campaign data
   const fetchCampaignData = useCallback(async () => {
@@ -115,18 +121,16 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
     fetchPromotionRulesData()
   }
 
-  const handleEditRule = (ruleId: number) => {
-    // TODO: Implement edit functionality
-    showInfoNotification(
-      "Edit functionality coming soon - This feature will be available in a future update."
-    )
-  }
-
-  const handleDeleteRule = (ruleId: number) => {
-    // TODO: Implement delete functionality
-    showInfoNotification(
-      "Delete functionality coming soon - This feature will be available in a future update."
-    )
+  const handleDeleteRule = async (ruleId: number) => {
+    try {
+      const result = await deletePromotionRule(campaignId, ruleId)
+      if (result) {
+        // Refresh promotion rules after successful deletion
+        fetchPromotionRulesData()
+      }
+    } catch (error) {
+      console.error("Error deleting promotion rule:", error)
+    }
   }
 
   const handleCampaignUpdateSuccess = () => {
@@ -144,6 +148,16 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
 
   const getRuleTypeDisplay = (ruleType: string) => {
     switch (ruleType) {
+      // New rule types
+      case "discount":
+        return "Discount"
+      case "upsizing":
+        return "Upsizing"
+      case "to_be_featured":
+        return "To Be Featured"
+      case "to_be_displayed":
+        return "To Be Displayed"
+      // Legacy rule types (for backward compatibility)
       case "price_reduction":
         return "Price Reduction"
       case "product_size_increase":
@@ -277,16 +291,41 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Promotion Rules</CardTitle>
-              <PromotionRuleForm
-                campaignId={campaignId}
-                onSuccess={handlePromotionRuleSuccess}
-                trigger={
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Rule
+              <div className="flex items-center gap-3">
+                {/* View Mode Toggle */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={viewMode === 'list' ? 'secondary' : 'outline'}
+                    size="icon"
+                    onClick={() => setViewMode('list')}
+                    aria-label="List View"
+                  >
+                    <List className="h-4 w-4" />
                   </Button>
-                }
-              />
+                  <Button
+                    variant={viewMode === 'grid' ? 'secondary' : 'outline'}
+                    size="icon"
+                    onClick={() => setViewMode('grid')}
+                    aria-label="Grid View"
+                  >
+                    <Grid className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                {campaign.dataset?.dataset_id && (
+                  <PromotionRuleForm
+                    campaignId={campaignId}
+                    datasetId={campaign.dataset.dataset_id}
+                    onSuccess={handlePromotionRuleSuccess}
+                    trigger={
+                      <Button>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Rule
+                      </Button>
+                    }
+                  />
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto">
@@ -310,127 +349,250 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
                 <CardDescription className="mb-4">
                   Add your first promotion rule to get started
                 </CardDescription>
-                <PromotionRuleForm
-                  campaignId={campaignId}
-                  onSuccess={handlePromotionRuleSuccess}
-                  trigger={
-                    <Button>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Rule
-                    </Button>
-                  }
-                />
+                {campaign.dataset?.dataset_id && (
+                  <PromotionRuleForm
+                    campaignId={campaignId}
+                    datasetId={campaign.dataset.dataset_id}
+                    onSuccess={handlePromotionRuleSuccess}
+                    trigger={
+                      <Button>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Rule
+                      </Button>
+                    }
+                  />
+                )}
               </div>
             ) : (
-              <div className="space-y-4">
-                {promotionRules.map((rule, index) => (
-                  <div key={rule.promotion_rule_id}>
-                    {index > 0 && <Separator />}
-                    <div className="py-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-3">
-                            <CardTitle className="text-lg">{rule.name}</CardTitle>
-                            <Badge 
-                              variant="secondary"
-                              className={rule.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}
-                            >
-                              {rule.is_active ? "Active" : "Inactive"}
-                            </Badge>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 gap-3">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <p className="text-sm font-medium">Rule Type</p>
-                                <p className="text-sm text-muted-foreground">{getRuleTypeDisplay(rule.rule_type)}</p>
-                              </div>
-                              
-                              <div>
-                                <p className="text-sm font-medium">Target Type</p>
-                                <p className="text-sm text-muted-foreground">{getTargetTypeDisplay(rule.target_type)}</p>
-                              </div>
+              <div className={viewMode === 'list' ? "space-y-4" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"}>
+                {promotionRules.map((rule) => {
+                  // Helper function to get all targets for this rule
+                  const getAllTargets = () => {
+                    const targets = []
+                    if (rule.target_categories) targets.push(...rule.target_categories)
+                    if (rule.target_brands) targets.push(...rule.target_brands)
+                    if (rule.target_upcs) targets.push(...rule.target_upcs)
+                    return targets
+                  }
+
+                  const allTargets = getAllTargets()
+                  const maxTargets = viewMode === 'list' ? 5 : 3
+                  const displayTargets = allTargets.slice(0, maxTargets)
+                  const hasMoreTargets = allTargets.length > maxTargets
+
+                  return (
+                    <Card 
+                      key={rule.promotion_rule_id} 
+                      className="hover:shadow-md transition-shadow duration-200"
+                    >
+                      <CardContent>
+                        {viewMode === 'list' ? (
+                          /* List View Layout */
+                          <div className="flex gap-4 items-center">
+                            {/* Icon Column */}
+                            <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                              <Target className="h-5 w-5 text-muted-foreground" />
                             </div>
                             
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <p className="text-sm font-medium">Start Date</p>
-                                <p className="text-sm text-muted-foreground">{formatTime(rule.start_date)}</p>
+                            {/* Content Column */}
+                            <div className="flex-1 flex flex-col gap-2">
+                              {/* Row 1: Rule name, Date range */}
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <CardTitle className="text-base">{rule.name}</CardTitle>
+                                  <span className="text-muted-foreground">•</span>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <Calendar className="h-4 w-4" />
+                                    <span>{formatTime(rule.start_date)} - {formatTime(rule.end_date)}</span>
+                                  </div>
+                                </div>
                               </div>
-                              
-                              <div>
-                                <p className="text-sm font-medium">End Date</p>
-                                <p className="text-sm text-muted-foreground">{formatTime(rule.end_date)}</p>
-                              </div>
-                            </div>
-                            
-                            {rule.price_reduction_percentage && (
-                              <div>
-                                <p className="text-sm font-medium">Price Reduction</p>
-                                <Badge variant="secondary" className="bg-green-100 text-green-700">
-                                  {(rule.price_reduction_percentage * 100).toFixed(1)}% off
+
+                              {/* Row 2: Target type, Rule type, and corresponding values */}
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="bg-orange-100 text-orange-700">
+                                  {getTargetTypeDisplay(rule.target_type)}
                                 </Badge>
+                                <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                                  {getRuleTypeDisplay(rule.rule_type)}
+                                </Badge>
+                                
+                                {/* Rule-specific values */}
+                                {rule.price_reduction_percentage != 0 && (
+                                  <Badge variant="secondary" className="bg-green-100 text-green-700">
+                                    {(rule.price_reduction_percentage)}% off
+                                  </Badge>
+                                )}
+                                {rule.price_reduction_amount != 0 && (
+                                  <Badge variant="secondary" className="bg-green-100 text-green-700">
+                                    ${rule.price_reduction_amount} off
+                                  </Badge>
+                                )}
+                                {rule.size_increase_percentage != 0 && (
+                                  <Badge variant="secondary" className="bg-purple-100 text-purple-700">
+                                    +{(rule.size_increase_percentage)}% size
+                                  </Badge>
+                                )}
+                                {rule.feature_enabled && rule.rule_type === "to_be_featured" && (
+                                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">
+                                    Featured
+                                  </Badge>
+                                )}
+                                {rule.display_enabled && rule.rule_type === "to_be_displayed" && (
+                                  <Badge variant="secondary" className="bg-orange-100 text-orange-700">
+                                    Displayed
+                                  </Badge>
+                                )}
                               </div>
-                            )}
-                            
-                            {rule.target_categories && rule.target_categories.length > 0 && (
-                              <div>
-                                <p className="text-sm font-medium">Target Categories</p>
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {rule.target_categories.map((category, idx) => (
-                                    <Badge key={idx} variant="outline">{category}</Badge>
-                                  ))}
-                                </div>
+
+                              {/* Row 3: Display first 5 target values */}
+                              <div className="flex flex-wrap gap-1">
+                                {displayTargets.map((target, idx) => (
+                                  <Badge key={idx} variant="outline" className="text-xs">{target}</Badge>
+                                ))}
+                                {hasMoreTargets && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{allTargets.length - maxTargets} more
+                                  </Badge>
+                                )}
                               </div>
-                            )}
-                            
-                            {rule.target_brands && rule.target_brands.length > 0 && (
-                              <div>
-                                <p className="text-sm font-medium">Target Brands</p>
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {rule.target_brands.map((brand, idx) => (
-                                    <Badge key={idx} variant="outline">{brand}</Badge>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            
-                            {rule.target_upcs && rule.target_upcs.length > 0 && (
-                              <div>
-                                <p className="text-sm font-medium">Target UPCs</p>
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {rule.target_upcs.map((upc, idx) => (
-                                    <Badge key={idx} variant="outline">{upc}</Badge>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
+                            </div>
+
+                            {/* Action Buttons Column */}
+                            <div className="flex items-center gap-2 ml-4">
+                              {campaign.dataset?.dataset_id && (
+                                <EditPromotionRuleModal
+                                  promotionRule={rule}
+                                  campaignId={campaignId}
+                                  datasetId={campaign.dataset.dataset_id}
+                                  onSuccess={handlePromotionRuleSuccess}
+                                  trigger={
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      title="Edit Rule"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  }
+                                />
+                              )}
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleDeleteRule(rule.promotion_rule_id)}
+                                title="Delete Rule"
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-2 ml-4">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleEditRule(rule.promotion_rule_id)}
-                            title="Edit Rule"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleDeleteRule(rule.promotion_rule_id)}
-                            title="Delete Rule"
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                        ) : (
+                          /* Grid View Layout */
+                          <div className="flex items-center gap-4">
+                            {/* Icon Column */}
+                            <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                              <Target className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                            
+                            {/* Content Column */}
+                            <div className="flex-1 flex flex-col gap-2">
+                              {/* Row 1: Rule name */}
+                              <CardTitle className="text-base leading-tight">{rule.name}</CardTitle>
+
+                              {/* Row 2: Target type, Rule type, and corresponding values */}
+                              <div className="flex flex-wrap items-center gap-2">
+                                
+                                <Badge variant="secondary" className="bg-orange-100 text-orange-700">
+                                  {getTargetTypeDisplay(rule.target_type)}
+                                </Badge>
+                                <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                                  {getRuleTypeDisplay(rule.rule_type)}
+                                </Badge>
+                                
+                                {/* Rule-specific values */}
+                                {rule.price_reduction_percentage != 0 && (
+                                  <Badge variant="secondary" className="bg-green-100 text-green-700">
+                                    {(rule.price_reduction_percentage)}% off
+                                  </Badge>
+                                )}
+                                {rule.price_reduction_amount != 0 && (
+                                  <Badge variant="secondary" className="bg-green-100 text-green-700">
+                                    ${rule.price_reduction_amount} off
+                                  </Badge>
+                                )}
+                                {rule.size_increase_percentage != 0 && (
+                                  <Badge variant="secondary" className="bg-purple-100 text-purple-700">
+                                    +{(rule.size_increase_percentage)}% size
+                                  </Badge>
+                                )}
+                                {rule.feature_enabled && rule.rule_type === "to_be_featured" && (
+                                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">
+                                    Featured
+                                  </Badge>
+                                )}
+                                {rule.display_enabled && rule.rule_type === "to_be_displayed" && (
+                                  <Badge variant="secondary" className="bg-orange-100 text-orange-700">
+                                    Displayed
+                                  </Badge>
+                                )}
+                              </div>
+
+                              {/* Row 3: Display first 3 target values */}
+                              <div className="flex flex-wrap gap-1">
+                                {displayTargets.map((target, idx) => (
+                                  <Badge key={idx} variant="outline" className="text-xs">{target}</Badge>
+                                ))}
+                                {hasMoreTargets && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{allTargets.length - maxTargets} more
+                                  </Badge>
+                                )}
+                              </div>
+
+                              {/* Row 4: Date range */}
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Calendar className="h-4 w-4" />
+                                <span>{formatTime(rule.start_date)} - {formatTime(rule.end_date)}</span>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons Column - Stacked vertically */}
+                            <div className="flex flex-col gap-2 ml-4">
+                              {campaign.dataset?.dataset_id && (
+                                <EditPromotionRuleModal
+                                  promotionRule={rule}
+                                  campaignId={campaignId}
+                                  datasetId={campaign.dataset.dataset_id}
+                                  onSuccess={handlePromotionRuleSuccess}
+                                  trigger={
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      title="Edit Rule"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  }
+                                />
+                              )}
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleDeleteRule(rule.promotion_rule_id)}
+                                title="Delete Rule"
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )
+                })}
               </div>
             )}
           </CardContent>

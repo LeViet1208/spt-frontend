@@ -10,6 +10,7 @@ import {
 	PromotionRule,
 	CreatePromotionRuleRequest,
 	PromotionRuleValidationResult,
+	DatasetValidationOptions,
 } from "@/utils/types/campaign";
 
 interface UpdateCampaignRequest {
@@ -302,6 +303,162 @@ export const useCampaign = () => {
 		[handleCampaignError]
 	);
 
+	const getDatasetValidationOptions = useCallback(
+		async (
+			datasetId: number,
+			options?: {
+				targetType?: string;
+				search?: string;
+				page?: number;
+				limit?: number;
+			}
+		): Promise<{
+			success: boolean;
+			data?: DatasetValidationOptions;
+			error?: string;
+		}> => {
+			setError(null);
+			try {
+				const response = await campaignService.getDatasetValidationOptions(
+					datasetId,
+					options
+				);
+				if (response.success && response.data) {
+					return response;
+				} else {
+					const errorMessage =
+						response.error || "Failed to get validation options";
+					setError(errorMessage);
+					return { success: false, error: errorMessage };
+				}
+			} catch (err) {
+				const errorMessage = "Failed to get validation options";
+				handleCampaignError(err, errorMessage, "get-validation-options");
+				return { success: false, error: errorMessage };
+			}
+		},
+		[handleCampaignError]
+	);
+
+	const getPromotionRule = useCallback(
+		async (campaignId: number, ruleId: number) => {
+			setError(null);
+			try {
+				const response = await campaignService.getPromotionRule(
+					campaignId,
+					ruleId
+				);
+				if (response.success && response.data) {
+					return response.data;
+				} else {
+					const errorMessage = response.error || "Failed to get promotion rule";
+					setError(errorMessage);
+					return null;
+				}
+			} catch (err) {
+				const errorMessage = "Failed to get promotion rule";
+				handleCampaignError(err, errorMessage, "get-promotion-rule");
+				return null;
+			}
+		},
+		[handleCampaignError]
+	);
+
+	const updatePromotionRule = useCallback(
+		async (
+			campaignId: number,
+			ruleId: number,
+			request: CreatePromotionRuleRequest
+		) => {
+			setIsLoading(true);
+			setError(null);
+			try {
+				const response = await campaignService.updatePromotionRule(
+					campaignId,
+					ruleId,
+					request
+				);
+				if (response.success && response.data) {
+					const updatedRule = response.data;
+
+					// Update promotion rules for this campaign
+					setPromotionRules((prev) => ({
+						...prev,
+						[campaignId]: prev[campaignId]
+							? prev[campaignId].map((rule) =>
+									rule.promotion_rule_id === ruleId ? updatedRule : rule
+							  )
+							: [updatedRule],
+					}));
+
+					showSuccessNotification("Promotion rule updated successfully!");
+					return updatedRule;
+				} else {
+					handleCampaignError(
+						new Error(response.error),
+						response.error || "Failed to update promotion rule",
+						"update-promotion-rule"
+					);
+					return null;
+				}
+			} catch (err) {
+				handleCampaignError(
+					err,
+					"Failed to update promotion rule",
+					"update-promotion-rule"
+				);
+				return null;
+			} finally {
+				setIsLoading(false);
+			}
+		},
+		[handleCampaignError, showSuccessNotification]
+	);
+
+	const deletePromotionRule = useCallback(
+		async (campaignId: number, ruleId: number) => {
+			setIsLoading(true);
+			setError(null);
+			try {
+				const response = await campaignService.deletePromotionRule(
+					campaignId,
+					ruleId
+				);
+				if (response.success && response.data) {
+					// Remove the rule from promotion rules for this campaign
+					setPromotionRules((prev) => ({
+						...prev,
+						[campaignId]: prev[campaignId]
+							? prev[campaignId].filter(
+									(rule) => rule.promotion_rule_id !== ruleId
+							  )
+							: [],
+					}));
+
+					showSuccessNotification("Promotion rule deleted successfully!");
+					return response.data;
+				} else {
+					handleCampaignError(
+						new Error(response.error),
+						response.error || "Failed to delete promotion rule",
+						"delete-promotion-rule"
+					);
+					return null;
+				}
+			} catch (err) {
+				handleCampaignError(
+					err,
+					"Failed to delete promotion rule",
+					"delete-promotion-rule"
+				);
+				return null;
+			} finally {
+				setIsLoading(false);
+			}
+		},
+		[handleCampaignError, showSuccessNotification]
+	);
+
 	const getCampaignsForDataset = useCallback(
 		(datasetId: number) => {
 			if (!campaigns[datasetId] && !isLoading) {
@@ -359,6 +516,10 @@ export const useCampaign = () => {
 		fetchPromotionRules,
 		createPromotionRule,
 		validatePromotionRule,
+		getDatasetValidationOptions,
+		getPromotionRule,
+		updatePromotionRule,
+		deletePromotionRule,
 
 		// Helper methods
 		getCampaignsForDataset,
