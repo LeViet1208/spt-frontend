@@ -19,7 +19,7 @@ import {
   LogOut,
   PanelLeft,
   PanelLeftClose,
-  TrendingUp
+  ChartBar
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { useSidebar } from "@/app/(main)/layout"
+import Link from 'next/link'
 
 interface SidebarProps {
   className?: string
@@ -82,10 +83,10 @@ export default function Sidebar({ className }: SidebarProps) {
       href: "/campaigns"
     },
     {
-      id: "analytics",
-      label: "Analytics",
-      icon: TrendingUp,
-      href: "/analytics/demand-decomposition"
+      id: "demands",
+      label: "Demands",
+      icon: ChartBar,
+      href: "/demands"
     },
     // {
     //   id: "settings",

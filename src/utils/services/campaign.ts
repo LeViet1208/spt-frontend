@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "@/utils/api";
+import { apiGet, apiPost, apiPut } from "@/utils/api";
 import { auth } from "@/utils/firebase";
 import { ApiResult, isApiSuccess } from "@/utils/types/api";
 import { handleApiError } from "@/utils/errorHandler";
@@ -33,6 +33,11 @@ interface CreateCampaignPayload {
 	description: string;
 	dataset_id: number;
 	created_at: string;
+}
+
+interface UpdateCampaignRequest {
+	name: string;
+	description?: string;
 }
 
 interface PromotionRulesPayload {
@@ -123,6 +128,44 @@ export const campaignService = {
 				dataset_id: result.payload.dataset_id,
 				created_at: result.payload.created_at,
 				updated_at: result.payload.created_at,
+				is_active: true,
+				promotion_rules_count: 0,
+			};
+
+			return {
+				success: true,
+				data: campaign,
+			};
+		} else {
+			return {
+				success: false,
+				error: result.message,
+			};
+		}
+	},
+
+	async updateCampaign(
+		campaignId: number,
+		request: UpdateCampaignRequest
+	): Promise<{ success: boolean; data?: Campaign; error?: string }> {
+		const result = await apiPut<{
+			campaign_id: number;
+			name: string;
+			description: string;
+			dataset_id: number;
+			created_at: string;
+			updated_at: string;
+		}>(`/campaigns/${campaignId}`, request);
+
+		if (isApiSuccess(result)) {
+			// Transform response to match Campaign interface
+			const campaign: Campaign = {
+				campaign_id: result.payload.campaign_id,
+				name: result.payload.name,
+				description: result.payload.description,
+				dataset_id: result.payload.dataset_id,
+				created_at: result.payload.created_at,
+				updated_at: result.payload.updated_at,
 				is_active: true,
 				promotion_rules_count: 0,
 			};

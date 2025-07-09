@@ -315,27 +315,27 @@ export default function DatasetsPage() {
                       onClick={() => handleDatasetClick(dataset)}
                     >
                       <CardContent>
-                        {/* Main Dataset Information */}
-                        <div className="flex flex-col">
-                          {/* Row 1: Name, Date Created, Description */}
-                          <div className="flex items-center gap-4">
-                            <div className="w-5 h-5 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
-                              <Database className="h-5 w-5 text-muted-foreground" />
-                            </div>
-                            <div className="flex-1 flex flex-col">
-                              <div className="flex items-center gap-2 text-sm">
-                                <CardTitle className="text-base">{dataset.name}</CardTitle>
-                                <span className="text-muted-foreground">•</span>
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  <Calendar className="h-3 w-3" />
-                                  <span>{new Date(dataset.createdAt || '').toLocaleDateString()}</span>
-                                </div>
+                        {/* Different layouts for list vs grid view */}
+                        {viewMode === 'list' ? (
+                          /* List View Layout */
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-4">
+                              <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                                <Database className="h-5 w-5 text-muted-foreground" />
                               </div>
-                              {dataset.description && (
-                                <CardDescription className="text-sm max-w-full line-clamp-1 mt-1">{dataset.description}</CardDescription>
-                              )}
-                            </div>
-                            {viewMode === 'list' && (
+                              <div className="flex-1 flex flex-col">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <CardTitle className="text-base">{dataset.name}</CardTitle>
+                                  <span className="text-muted-foreground">•</span>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <Calendar className="h-4 w-4" />
+                                    <span>{new Date(dataset.createdAt || '').toLocaleDateString()}</span>
+                                  </div>
+                                </div>
+                                {dataset.description && (
+                                  <CardDescription className="text-sm max-w-full line-clamp-1 mt-1">{dataset.description}</CardDescription>
+                                )}
+                              </div>
                               <div className="flex items-center gap-2">
                                 <div className="text-xs font-medium text-muted-foreground">
                                   {statusMessage}
@@ -352,29 +352,52 @@ export default function DatasetsPage() {
                                   />
                                 )}
                               </div>
-                            )}
-                          </div>
-
-                          {/* Row 2: Status display (only for grid view) */}
-                          {viewMode === 'grid' && (
-                            <div className="flex items-center justify-center gap-2 mt-2">
-                              <div className="text-xs font-medium text-muted-foreground">
-                                {statusMessage}
-                              </div>
-                              {statusMessage === "Ready" ? (
-                                <CheckCircle className="h-4 w-4 text-chart-2" />
-                              ) : dataset.status === "failed" ? (
-                                <XCircle className="h-4 w-4 text-destructive" />
-                              ) : (
-                                <Spinner 
-                                  size="sm" 
-                                  color={isError ? "destructive" : "chart-3"} 
-                                  shimmer={dataset.status !== "completed" && !isError} 
-                                />
-                              )}
                             </div>
-                          )}
-                        </div>
+                          </div>
+                        ) : (
+                          /* Grid View Layout */
+                          <div className="flex items-center gap-6">
+                            {/* Icon on the left */}
+                            <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                              <Database className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                            
+                            {/* Vertical column of information */}
+                            <div className="flex-1 flex flex-col gap-2">
+                              {/* Name */}
+                              <CardTitle className="text-base leading-tight">{dataset.name}</CardTitle>
+                              
+                              {/* Description */}
+                              {dataset.description && (
+                                <CardDescription className="text-sm line-clamp-2">{dataset.description}</CardDescription>
+                              )}
+                              
+                              {/* Date */}
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Calendar className="h-4 w-4" />
+                                <span>{new Date(dataset.createdAt || '').toLocaleDateString()}</span>
+                              </div>
+                              
+                              {/* Status */}
+                              <div className="flex items-center gap-2">
+                                {statusMessage === "Ready" ? (
+                                  <CheckCircle className="h-4 w-4 text-chart-2" />
+                                ) : dataset.status === "failed" ? (
+                                  <XCircle className="h-4 w-4 text-destructive" />
+                                ) : (
+                                  <Spinner 
+                                    size="sm" 
+                                    color={isError ? "destructive" : "chart-3"} 
+                                    shimmer={dataset.status !== "completed" && !isError} 
+                                  />
+                                )}
+                                <div className="text-xs font-medium text-muted-foreground">
+                                  {statusMessage}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   );

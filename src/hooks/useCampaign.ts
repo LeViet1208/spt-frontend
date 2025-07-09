@@ -12,6 +12,11 @@ import {
 	PromotionRuleValidationResult,
 } from "@/utils/types/campaign";
 
+interface UpdateCampaignRequest {
+	name: string;
+	description?: string;
+}
+
 export const useCampaign = () => {
 	const { showSuccessNotification } = useNotifications();
 
@@ -132,6 +137,68 @@ export const useCampaign = () => {
 			}
 		},
 		[handleCampaignError, showSuccessNotification]
+	);
+
+	const updateCampaign = useCallback(
+		async (campaignId: number, request: UpdateCampaignRequest) => {
+			setIsLoading(true);
+			setError(null);
+			try {
+				const response = await campaignService.updateCampaign(
+					campaignId,
+					request
+				);
+				if (response.success && response.data) {
+					const updatedCampaign = response.data;
+
+					// Update dataset-specific campaigns
+					setCampaigns((prev) => {
+						const updated = { ...prev };
+						Object.keys(updated).forEach((datasetId) => {
+							updated[parseInt(datasetId)] = updated[parseInt(datasetId)].map(
+								(campaign) =>
+									campaign.campaign_id === campaignId
+										? updatedCampaign
+										: campaign
+							);
+						});
+						return updated;
+					});
+
+					// Update all campaigns
+					setAllCampaigns((prev) =>
+						prev.map((campaign) =>
+							campaign.campaign_id === campaignId ? updatedCampaign : campaign
+						)
+					);
+
+					// Update current campaign if it's the one being updated
+					if (currentCampaign?.campaign_id === campaignId) {
+						setCurrentCampaign(updatedCampaign);
+					}
+
+					showSuccessNotification("Campaign updated successfully!");
+					return updatedCampaign;
+				} else {
+					handleCampaignError(
+						new Error(response.error),
+						response.error || "Failed to update campaign",
+						"update-campaign"
+					);
+					return null;
+				}
+			} catch (err) {
+				handleCampaignError(
+					err,
+					"Failed to update campaign",
+					"update-campaign"
+				);
+				return null;
+			} finally {
+				setIsLoading(false);
+			}
+		},
+		[handleCampaignError, showSuccessNotification, currentCampaign]
 	);
 
 	const fetchPromotionRules = useCallback(
@@ -288,6 +355,7 @@ export const useCampaign = () => {
 		fetchCampaignsByDataset,
 		fetchAllCampaigns,
 		createCampaign,
+		updateCampaign,
 		fetchPromotionRules,
 		createPromotionRule,
 		validatePromotionRule,

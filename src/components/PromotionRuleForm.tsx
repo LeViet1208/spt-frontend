@@ -1,14 +1,15 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Calendar, AlertCircle, Check, X } from "lucide-react"
+import { AlertCircle, Check, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { InputWithLabel } from "@/components/ui/input-with-label"
+import { SelectWithLabel } from "@/components/ui/select-with-label"
+import { SelectItem } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
+
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useCampaign } from "@/hooks/useCampaign"
@@ -274,54 +275,46 @@ export function PromotionRuleForm({ campaignId, trigger, onSuccess }: PromotionR
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Information */}
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="name">Rule Name</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                placeholder="Enter promotion rule name"
-              />
-            </div>
+            <InputWithLabel
+              label="Rule Name"
+              htmlFor="name"
+              value={formData.name}
+              onChange={(e) => handleInputChange('name', e.target.value)}
+              placeholder="Enter promotion rule name"
+            />
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="rule_type">Rule Type</Label>
-                <Select value={formData.rule_type} onValueChange={(value) => handleInputChange('rule_type', value as RuleType)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ruleTypeOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        <div>
-                          <div className="font-medium">{option.label}</div>
-                          <div className="text-sm text-muted-foreground">{option.description}</div>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <SelectWithLabel
+                label="Rule Type"
+                htmlFor="rule_type"
+                value={formData.rule_type}
+                onValueChange={(value) => handleInputChange('rule_type', value as RuleType)}
+              >
+                {ruleTypeOptions.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    <div>
+                      <div className="font-medium">{option.label}</div>
+                      <div className="text-sm text-muted-foreground">{option.description}</div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectWithLabel>
 
-              <div>
-                <Label htmlFor="target_type">Target Type</Label>
-                <Select value={formData.target_type} onValueChange={(value) => handleInputChange('target_type', value as TargetType)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {targetTypeOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        <div>
-                          <div className="font-medium">{option.label}</div>
-                          <div className="text-sm text-muted-foreground">{option.description}</div>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <SelectWithLabel
+                label="Target Type"
+                htmlFor="target_type"
+                value={formData.target_type}
+                onValueChange={(value) => handleInputChange('target_type', value as TargetType)}
+              >
+                {targetTypeOptions.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    <div>
+                      <div className="font-medium">{option.label}</div>
+                      <div className="text-sm text-muted-foreground">{option.description}</div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectWithLabel>
             </div>
           </div>
 
@@ -329,24 +322,20 @@ export function PromotionRuleForm({ campaignId, trigger, onSuccess }: PromotionR
           <div className="space-y-4">
             <Label>Date Range</Label>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="start_date">Start Date</Label>
-                <Input
-                  id="start_date"
-                  type="date"
-                  value={formatDate(formData.start_date)}
-                  onChange={(e) => handleInputChange('start_date', new Date(e.target.value))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="end_date">End Date</Label>
-                <Input
-                  id="end_date"
-                  type="date"
-                  value={formatDate(formData.end_date)}
-                  onChange={(e) => handleInputChange('end_date', new Date(e.target.value))}
-                />
-              </div>
+              <InputWithLabel
+                label="Start Date"
+                htmlFor="start_date"
+                type="date"
+                value={formatDate(formData.start_date)}
+                onChange={(e) => handleInputChange('start_date', new Date(e.target.value))}
+              />
+              <InputWithLabel
+                label="End Date"
+                htmlFor="end_date"
+                type="date"
+                value={formatDate(formData.end_date)}
+                onChange={(e) => handleInputChange('end_date', new Date(e.target.value))}
+              />
             </div>
           </div>
 
@@ -385,29 +374,25 @@ export function PromotionRuleForm({ campaignId, trigger, onSuccess }: PromotionR
             <div className="space-y-4">
               <Label>Price Reduction</Label>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="price_reduction_percentage">Percentage (%)</Label>
-                  <Input
-                    id="price_reduction_percentage"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    value={formData.price_reduction_percentage || ''}
-                    onChange={(e) => handleInputChange('price_reduction_percentage', parseFloat(e.target.value) || 0)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="price_reduction_amount">Amount ($)</Label>
-                  <Input
-                    id="price_reduction_amount"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.price_reduction_amount || ''}
-                    onChange={(e) => handleInputChange('price_reduction_amount', parseFloat(e.target.value) || 0)}
-                  />
-                </div>
+                <InputWithLabel
+                  label="Percentage (%)"
+                  htmlFor="price_reduction_percentage"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={formData.price_reduction_percentage || ''}
+                  onChange={(e) => handleInputChange('price_reduction_percentage', parseFloat(e.target.value) || 0)}
+                />
+                <InputWithLabel
+                  label="Amount ($)"
+                  htmlFor="price_reduction_amount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.price_reduction_amount || ''}
+                  onChange={(e) => handleInputChange('price_reduction_amount', parseFloat(e.target.value) || 0)}
+                />
               </div>
             </div>
           )}
@@ -415,54 +400,38 @@ export function PromotionRuleForm({ campaignId, trigger, onSuccess }: PromotionR
           {formData.rule_type === "product_size_increase" && (
             <div className="space-y-4">
               <Label>Size Increase</Label>
-              <div>
-                <Label htmlFor="size_increase_percentage">Percentage (%)</Label>
-                <Input
-                  id="size_increase_percentage"
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={formData.size_increase_percentage || ''}
-                  onChange={(e) => handleInputChange('size_increase_percentage', parseFloat(e.target.value) || 0)}
-                />
-              </div>
+              <InputWithLabel
+                label="Percentage (%)"
+                htmlFor="size_increase_percentage"
+                type="number"
+                min="0"
+                step="0.1"
+                value={formData.size_increase_percentage || ''}
+                onChange={(e) => handleInputChange('size_increase_percentage', parseFloat(e.target.value) || 0)}
+              />
             </div>
           )}
 
           {formData.rule_type === "feature_yes_no" && (
-            <div className="space-y-4">
-              <Label>Feature Setting</Label>
-              <Select 
-                value={formData.feature_enabled ? "true" : "false"} 
-                onValueChange={(value) => handleInputChange('feature_enabled', value === "true")}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="true">Enable Feature</SelectItem>
-                  <SelectItem value="false">Disable Feature</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <SelectWithLabel
+              label="Feature Setting"
+              value={formData.feature_enabled ? "true" : "false"} 
+              onValueChange={(value) => handleInputChange('feature_enabled', value === "true")}
+            >
+              <SelectItem value="true">Enable Feature</SelectItem>
+              <SelectItem value="false">Disable Feature</SelectItem>
+            </SelectWithLabel>
           )}
 
           {formData.rule_type === "display_yes_no" && (
-            <div className="space-y-4">
-              <Label>Display Setting</Label>
-              <Select 
-                value={formData.display_enabled ? "true" : "false"} 
-                onValueChange={(value) => handleInputChange('display_enabled', value === "true")}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="true">Enable Display</SelectItem>
-                  <SelectItem value="false">Disable Display</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <SelectWithLabel
+              label="Display Setting"
+              value={formData.display_enabled ? "true" : "false"} 
+              onValueChange={(value) => handleInputChange('display_enabled', value === "true")}
+            >
+              <SelectItem value="true">Enable Display</SelectItem>
+              <SelectItem value="false">Disable Display</SelectItem>
+            </SelectWithLabel>
           )}
 
           {/* Validation Results */}

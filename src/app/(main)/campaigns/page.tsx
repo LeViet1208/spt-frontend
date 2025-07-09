@@ -18,6 +18,8 @@ import {
   Database,
   Target,
   ArrowLeft,
+  List, // Added for list view icon
+  Grid, // Added for grid view icon
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -49,6 +51,9 @@ export default function CampaignsPage() {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // State for view mode (list or grid)
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
 
   // Promotion rules state
   const [promotionRules, setPromotionRules] = useState<{ [campaignId: number]: PromotionRule[] }>({})
@@ -237,6 +242,26 @@ export default function CampaignsPage() {
               {sortOrder === 'desc' ? 'Newest' : 'Oldest'}
             </Button>
 
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant={viewMode === 'list' ? 'secondary' : 'outline'}
+                size="icon"
+                onClick={() => setViewMode('list')}
+                aria-label="List View"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'grid' ? 'secondary' : 'outline'}
+                size="icon"
+                onClick={() => setViewMode('grid')}
+                aria-label="Grid View"
+              >
+                <Grid className="h-4 w-4" />
+              </Button>
+            </div>
+
             {/* Refresh Button */}
             {/* <Button
               variant="outline"
@@ -265,7 +290,7 @@ export default function CampaignsPage() {
       </Card>
 
       {/* Campaign List */}
-      <div className="space-y-4">
+      <div className={viewMode === 'list' ? "space-y-4" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"}>
         {campaignLoading ? (
           <Card>
             <CardContent className="p-8 text-center">
@@ -300,121 +325,93 @@ export default function CampaignsPage() {
                 className="hover:shadow-md cursor-pointer transition-shadow duration-200"
                 onClick={() => handleCampaignClick(campaign)}
               >
-                <CardContent className="p-6">
-                  {/* Main Campaign Information */}
-                  <div className="flex items-start justify-between mb-4">
-                    {/* Left side - Campaign info */}
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
-                        <Megaphone className="h-6 w-6 text-muted-foreground" />
+                <CardContent>
+                  {/* Different layouts for list vs grid view */}
+                  {viewMode === 'list' ? (
+                    /* List View Layout */
+                    <div className="flex gap-4 items-center">
+                      {/* Icon Column */}
+                      <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                        <Megaphone className="h-5 w-5 text-muted-foreground" />
                       </div>
-                      <div className="flex-1">
-                        <CardTitle className="text-lg mb-1">{campaign.name}</CardTitle>
-                        {campaign.description && (
-                          <CardDescription className="mb-2 max-w-2xl">{campaign.description}</CardDescription>
-                        )}
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4" />
-                            <span>Created {new Date(campaign.created_at || '').toLocaleDateString()}</span>
-                          </div>
-                          {campaign.dataset && (
-                            <div className="flex items-center gap-2">
-                              <Database className="h-4 w-4" />
-                              <span>Dataset: {campaign.dataset.name || `ID ${campaign.dataset.dataset_id}`}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right side - Campaign Status */}
-                    <div className="flex flex-col items-end gap-2">
-                      {getStatusBadge(campaign.is_active)}
                       
-                      <Badge variant="secondary" className="bg-blue-50 text-blue-700">
-                        <Target className="h-3 w-3 mr-1" />
-                        {campaign.promotion_rules_count} rule{campaign.promotion_rules_count !== 1 ? 's' : ''}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  {/* Promotion Rules Section */}
-                  <div className="pt-4 border-t">
-                    <h4 className="text-sm font-medium mb-3">Promotion Rules</h4>
-                    
-                    {promotionRulesLoading[campaign.campaign_id] ? (
-                      <div className="flex items-center justify-center py-4">
-                        <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground mr-2" />
-                        <span className="text-sm text-muted-foreground">Loading promotion rules...</span>
-                      </div>
-                    ) : !promotionRules[campaign.campaign_id] || promotionRules[campaign.campaign_id].length === 0 ? (
-                      <div className="text-center py-4 text-muted-foreground">
-                        <p className="text-sm">No promotion rules found</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {promotionRules[campaign.campaign_id].slice(0, 3).map((rule) => (
-                          <div key={rule.promotion_rule_id} className="p-3 bg-muted/50 rounded-lg">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <h5 className="text-sm font-medium">{rule.name}</h5>
-                                  {getStatusBadge(rule.is_active)}
-                                </div>
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-muted-foreground">
-                                  <div className="flex items-center gap-1">
-                                    <span className="font-medium">Type:</span>
-                                    <span>{formatRuleType(rule.rule_type)}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <span className="font-medium">Target:</span>
-                                    <span>{formatTargetType(rule.target_type)}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <span className="font-medium">Duration:</span>
-                                    <span>{formatDateRange(rule.start_date, rule.end_date)}</span>
-                                  </div>
-                                </div>
-
-                                {/* Rule Details */}
-                                <div className="mt-2 flex items-center gap-2 text-xs">
-                                  {rule.price_reduction_percentage && (
-                                    <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
-                                      -{(rule.price_reduction_percentage * 100).toFixed(1)}% off
-                                    </Badge>
-                                  )}
-                                  {rule.price_reduction_amount && (
-                                    <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
-                                      -${rule.price_reduction_amount} off
-                                    </Badge>
-                                  )}
-                                  {rule.feature_enabled && (
-                                    <Badge variant="secondary" className="bg-purple-100 text-purple-700 text-xs">
-                                      Featured
-                                    </Badge>
-                                  )}
-                                  {rule.display_enabled && (
-                                    <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-xs">
-                                      Display
-                                    </Badge>
-                                  )}
-                                </div>
+                      {/* Content Column */}
+                      <div className="flex-1 flex flex-col gap-2">
+                        {/* Row 1: Name, Date Created, Description */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 flex flex-col">
+                            <div className="flex items-center gap-2 text-sm">
+                              <CardTitle className="text-base">{campaign.name}</CardTitle>
+                              <span className="text-muted-foreground">•</span>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Calendar className="h-4 w-4" />
+                                <span>{new Date(campaign.created_at || '').toLocaleDateString()}</span>
                               </div>
                             </div>
+                            {campaign.description && (
+                              <CardDescription className="text-sm max-w-full line-clamp-1 mt-1">{campaign.description}</CardDescription>
+                            )}
                           </div>
-                        ))}
-                        {promotionRules[campaign.campaign_id].length > 3 && (
-                          <div className="text-center py-2">
-                            <span className="text-xs text-muted-foreground">
-                              +{promotionRules[campaign.campaign_id].length - 3} more rules
-                            </span>
+                          <div className="flex items-center gap-2 ml-4">
+                            <div className="text-xs font-medium text-muted-foreground">
+                              {campaign.promotion_rules_count} rule{campaign.promotion_rules_count !== 1 ? 's' : ''}
+                            </div>
+                            <Target className="h-4 w-4 text-chart-3" />
+                          </div>
+                        </div>
+
+                        {/* Row 2: Dataset Info */}
+                        {campaign.dataset && (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Database className="h-4 w-4" />
+                            <span>{campaign.dataset.name || `ID ${campaign.dataset.dataset_id}`}</span>
                           </div>
                         )}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    /* Grid View Layout */
+                    <div className="flex items-center gap-6">
+                      {/* Icon on the left */}
+                      <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                        <Megaphone className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      
+                      {/* Vertical column of information */}
+                      <div className="flex-1 flex flex-col gap-2">
+                        {/* Name */}
+                        <CardTitle className="text-base leading-tight">{campaign.name}</CardTitle>
+                        
+                        {/* Description */}
+                        {campaign.description && (
+                          <CardDescription className="text-sm line-clamp-2">{campaign.description}</CardDescription>
+                        )}
+
+                        {/* Dataset Info */}
+                        {campaign.dataset && (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Database className="h-4 w-4" />
+                            <span>{campaign.dataset.name || `ID ${campaign.dataset.dataset_id}`}</span>
+                          </div>
+                        )}
+
+                        {/* Rules count */}
+                        <div className="flex items-center gap-2">
+                          <Target className="h-4 w-4 text-chart-3" />
+                          <div className="text-xs font-medium text-muted-foreground">
+                            {campaign.promotion_rules_count} rule{campaign.promotion_rules_count !== 1 ? 's' : ''}
+                          </div>
+                        </div>
+                        
+                        {/* Date */}
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Calendar className="h-4 w-4" />
+                          <span>{new Date(campaign.created_at || '').toLocaleDateString()}</span>
+                        </div>
+
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}

@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation"
 import { useCampaign } from "@/hooks/useCampaign"
 import { useNotifications } from "@/hooks/useNotifications"
 import { PromotionRuleForm } from "@/components/PromotionRuleForm"
+import { EditCampaignModal } from "@/components/EditCampaignModal"
 import type { Campaign, PromotionRule } from "@/utils/types/campaign"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -128,11 +129,9 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
     )
   }
 
-  const handleEditCampaign = () => {
-    // TODO: Implement edit campaign functionality
-    showInfoNotification(
-      "Edit campaign functionality coming soon - This feature will be available in a future update."
-    )
+  const handleCampaignUpdateSuccess = () => {
+    // Refresh campaign data after successful update
+    fetchCampaignData()
   }
 
   const formatDate = (dateString: string) => {
@@ -199,74 +198,82 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
 
   return (
     <div className="h-full">
-      {/* Main Content - 2 Column Layout */}
-      <div className="h-full grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Main Content - Vertical Column Layout */}
+      <div className="h-full flex flex-col gap-6">
         {/* Campaign Information */}
-        <Card className="flex flex-col">
+        <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Campaign Information</CardTitle>
               <div className="flex items-center gap-3">
-                <Button onClick={handleEditCampaign}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Campaign
-                </Button>
+                <EditCampaignModal
+                  campaign={campaign}
+                  onSuccess={handleCampaignUpdateSuccess}
+                  trigger={
+                    <Button>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Campaign
+                    </Button>
+                  }
+                />
               </div>
             </div>
           </CardHeader>
-          <CardContent className="flex-1 space-y-4">
-            <div className="flex items-center gap-3">
-              <Tag className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">Campaign Name</p>
-                <p className="text-sm text-muted-foreground">{campaign.name}</p>
-              </div>
-            </div>
-
-            {campaign.description && (
-              <div className="flex items-start gap-3">
-                <Settings className="h-5 w-5 text-muted-foreground mt-0.5" />
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="flex items-center gap-3">
+                <Tag className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium">Description</p>
-                  <p className="text-sm text-muted-foreground">{campaign.description}</p>
+                  <p className="text-sm font-medium">Campaign Name</p>
+                  <p className="text-sm text-muted-foreground">{campaign.name}</p>
                 </div>
               </div>
-            )}
 
-            {campaign.dataset && (
+              {campaign.description && (
+                <div className="flex items-start gap-3">
+                  <Settings className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium">Description</p>
+                    <p className="text-sm text-muted-foreground">{campaign.description}</p>
+                  </div>
+                </div>
+              )}
+
+              {campaign.dataset && (
+                <div className="flex items-center gap-3">
+                  <Database className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Dataset</p>
+                    <p className="text-sm text-muted-foreground">
+                      {campaign.dataset.name || `Dataset ID: ${campaign.dataset.dataset_id}`}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-3">
-                <Database className="h-5 w-5 text-muted-foreground" />
+                <Calendar className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium">Dataset</p>
+                  <p className="text-sm font-medium">Created</p>
+                  <p className="text-sm text-muted-foreground">{formatDate(campaign.created_at)}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Target className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Promotion Rules</p>
                   <p className="text-sm text-muted-foreground">
-                    {campaign.dataset.name || `Dataset ID: ${campaign.dataset.dataset_id}`}
+                    {promotionRules.length} {promotionRules.length === 1 ? 'rule' : 'rules'}
                   </p>
                 </div>
-              </div>
-            )}
-
-            <div className="flex items-center gap-3">
-              <Calendar className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">Created</p>
-                <p className="text-sm text-muted-foreground">{formatDate(campaign.created_at)}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Target className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">Promotion Rules</p>
-                <p className="text-sm text-muted-foreground">
-                  {promotionRules.length} {promotionRules.length === 1 ? 'rule' : 'rules'}
-                </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Promotion Rules */}
-        <Card className="flex flex-col">
+        <Card className="flex-1">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Promotion Rules</CardTitle>
@@ -333,7 +340,7 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
                           </div>
                           
                           <div className="grid grid-cols-1 gap-3">
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div>
                                 <p className="text-sm font-medium">Rule Type</p>
                                 <p className="text-sm text-muted-foreground">{getRuleTypeDisplay(rule.rule_type)}</p>
@@ -345,7 +352,7 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
                               </div>
                             </div>
                             
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div>
                                 <p className="text-sm font-medium">Start Date</p>
                                 <p className="text-sm text-muted-foreground">{formatTime(rule.start_date)}</p>

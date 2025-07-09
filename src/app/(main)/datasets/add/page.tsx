@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Textarea } from "@/components/ui/textarea"
+import { TextareaWithLabel } from "@/components/ui/textarea-with-label"
 import {
   Tooltip,
   TooltipContent,
@@ -390,17 +390,15 @@ export default function AddDatasetPage() {
             />
           </div>
 
-          <div>
-            <label htmlFor="dataset-description" className="block text-sm font-medium mb-2">Description (Optional)</label>
-            <Textarea
-              id="dataset-description"
-              rows={3}
-              value={datasetDescription}
-              onChange={(e) => setDatasetDescription(e.target.value)}
-              disabled={isSubmitting}
-              placeholder="Describe your dataset"
-            />
-          </div>
+          <TextareaWithLabel
+            label="Description (Optional)"
+            htmlFor="dataset-description"
+            rows={3}
+            value={datasetDescription}
+            onChange={(e) => setDatasetDescription(e.target.value)}
+            disabled={isSubmitting}
+            placeholder="Describe your dataset"
+          />
         </div>
 
         {/* Files Summary */}
