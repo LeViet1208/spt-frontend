@@ -100,15 +100,16 @@ export interface PromotionRuleValidationResult {
 
 // Dataset validation options for promotion rule creation
 export interface DatasetValidationOptions {
-	dataset_id: number;
-	last_updated: string | null;
-	date_range: {
+	dataset_id?: number;
+	last_updated?: string | null;
+	date_range?: {
 		min_date: string | null;
 		max_date: string | null;
 	};
-	categories: string[];
-	brands: string[];
-	upcs: string[];
+	stores?: string[];
+	categories?: string[];
+	brands?: string[];
+	upcs?: string[];
 	pagination?: {
 		page: number;
 		limit: number;

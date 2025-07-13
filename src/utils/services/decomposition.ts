@@ -23,7 +23,7 @@ export const decompositionService = {
 		error?: string;
 	}> {
 		const result = await apiPost<DecompositionAnalysisResponse>(
-			`/datasets/${datasetId}/demand-decomposition`,
+			`/datasets/${datasetId}/demanddecomposition`,
 			request
 		);
 
@@ -47,7 +47,7 @@ export const decompositionService = {
 		error?: string;
 	}> {
 		const result = await apiGet<DecompositionStatusResponse>(
-			`/demand-decomposition/${requestId}/status`
+			`/demanddecomposition/${requestId}/status`
 		);
 
 		if (isApiSuccess(result)) {
@@ -76,7 +76,7 @@ export const decompositionService = {
 		if (filters?.status) params.append("status", filters.status);
 		if (filters?.limit) params.append("limit", filters.limit.toString());
 
-		const url = `/datasets/${datasetId}/demand-decomposition/history${
+		const url = `/datasets/${datasetId}/demanddecomposition/history${
 			params.toString() ? `?${params.toString()}` : ""
 		}`;
 		const result = await apiGet<DecompositionHistoryResponse>(url);
@@ -104,7 +104,7 @@ export const decompositionService = {
 		error?: string;
 	}> {
 		const result = await apiPost<CampaignImpactAnalysisResponse>(
-			`/campaigns/${campaignId}/impact-analysis`,
+			`/campaigns/${campaignId}/impactanalysis`,
 			request
 		);
 
@@ -128,7 +128,7 @@ export const decompositionService = {
 		error?: string;
 	}> {
 		const result = await apiGet<DecompositionCategoriesResponse>(
-			"/decomposition-categories"
+			"/decompositioncategories"
 		);
 
 		if (isApiSuccess(result)) {
@@ -151,7 +151,7 @@ export const decompositionService = {
 		error?: string;
 	}> {
 		const result = await apiPost<{ message: string; total_categories: number }>(
-			"/decomposition-categories"
+			"/decompositioncategories"
 		);
 
 		if (isApiSuccess(result)) {
@@ -169,16 +169,9 @@ export const decompositionService = {
 
 	// Helper function to generate cache key
 	generateCacheKey(request: DecompositionAnalysisRequest): string {
-		const {
-			upc,
-			store_id,
-			category,
-			brand,
-			start_time,
-			end_time,
-			campaign_id,
-		} = request;
-		return `decomp_${upc}_${store_id}_${category}_${brand}_${start_time}_${end_time}_${
+		const { upc, store_id, category, start_time, end_time, campaign_id } =
+			request;
+		return `decomp_${upc}_${store_id}_${category}_${start_time}_${end_time}_${
 			campaign_id || "no_campaign"
 		}`;
 	},
@@ -200,7 +193,11 @@ export const decompositionService = {
 	} {
 		const errors: string[] = [];
 
-		if (!request.upc?.trim()) {
+		if (
+			!request.upc ||
+			typeof request.upc !== "string" ||
+			!request.upc.trim()
+		) {
 			errors.push("UPC is required");
 		}
 
@@ -208,12 +205,12 @@ export const decompositionService = {
 			errors.push("Valid store ID is required");
 		}
 
-		if (!request.category?.trim()) {
+		if (
+			!request.category ||
+			typeof request.category !== "string" ||
+			!request.category.trim()
+		) {
 			errors.push("Category is required");
-		}
-
-		if (!request.brand?.trim()) {
-			errors.push("Brand is required");
 		}
 
 		if (!request.start_time) {
@@ -240,7 +237,6 @@ export const decompositionService = {
 				errors.push("Invalid end time format");
 			}
 		}
-
 		return {
 			valid: errors.length === 0,
 			errors,

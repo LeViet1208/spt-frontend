@@ -276,8 +276,11 @@ export const campaignService = {
 	async getDatasetValidationOptions(
 		datasetId: number,
 		options?: {
-			targetType?: string;
+			store_id?: string;
+			category?: string;
 			search?: string;
+			for_demand_decomposition?: boolean;
+			targetType?: string;
 			page?: number;
 			limit?: number;
 		}
@@ -287,10 +290,27 @@ export const campaignService = {
 		error?: string;
 	}> {
 		const params = new URLSearchParams();
-		if (options?.targetType) params.append("target_type", options.targetType);
-		if (options?.search) params.append("search", options.search);
-		if (options?.page) params.append("page", options.page.toString());
-		if (options?.limit) params.append("limit", options.limit.toString());
+		if (options?.for_demand_decomposition) {
+			params.append("for_demand_decomposition", "true");
+		}
+		if (options?.store_id) {
+			params.append("store_id", options.store_id);
+		}
+		if (options?.category) {
+			params.append("category", options.category);
+		}
+		if (options?.search) {
+			params.append("search", options.search);
+		}
+		if (options?.targetType) {
+			params.append("target_type", options.targetType);
+		}
+		if (options?.page) {
+			params.append("page", options.page.toString());
+		}
+		if (options?.limit) {
+			params.append("limit", options.limit.toString());
+		}
 
 		const queryString = params.toString();
 		const url = `/datasets/${datasetId}/validationoptions${

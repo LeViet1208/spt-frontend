@@ -307,10 +307,13 @@ export const useCampaign = () => {
 		async (
 			datasetId: number,
 			options?: {
+				store_id?: string;
+				category?: string;
 				targetType?: string;
 				search?: string;
 				page?: number;
 				limit?: number;
+				for_demand_decomposition?: boolean;
 			}
 		): Promise<{
 			success: boolean;

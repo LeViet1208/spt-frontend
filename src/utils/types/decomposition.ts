@@ -15,7 +15,6 @@ export interface DecompositionAnalysisRequest {
 	upc: string;
 	store_id: number;
 	category: string;
-	brand: string;
 	start_time: string; // ISO datetime
 	end_time: string; // ISO datetime
 	campaign_id?: number;
