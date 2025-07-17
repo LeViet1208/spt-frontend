@@ -18,6 +18,7 @@ const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
 interface EnhancedBivariateVisualizationProps {
     datasetId: string;
+    onVisualizationUpdate?: (visualizationData: any) => void;
 }
 
 // Predefined attribute list as requested
@@ -46,13 +47,24 @@ const PREDEFINED_ATTRIBUTES = [
     { name: "end_time", type: "datetime", label: "End Time", description: "End time of the promotion period" },
 ];
 
+// ✅ NEW: Data type options for the dropdown
+const DATA_TYPES = [
+    { value: "numerical", label: "Numerical" },
+    { value: "categorical", label: "Categorical" },
+    { value: "binary", label: "Binary" },
+    { value: "datetime", label: "Datetime" },
+];
+
 export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualizationProps> = ({
     datasetId,
+    onVisualizationUpdate,
 }) => {
     const [availableVariables, setAvailableVariables] = useState<EnhancedMergedVariablesResponse | null>(null);
     const [mergedDatasetData, setMergedDatasetData] = useState<any[]>([]);
     const [variable1, setVariable1] = useState<string>("");
     const [variable2, setVariable2] = useState<string>("");
+    const [variable1Type, setVariable1Type] = useState<string>(""); // ✅ NEW: Type for variable 1
+    const [variable2Type, setVariable2Type] = useState<string>(""); // ✅ NEW: Type for variable 2
     const [isLoading, setIsLoading] = useState(false);
     const [isLoadingData, setIsLoadingData] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -69,7 +81,6 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
             setError(null);
 
             try {
-                // ✅ CORRECT: Only fetch variable metadata and merged dataset data
                 const [variablesResult, datasetResult] = await Promise.all([
                     datasetService.getEnhancedMergedVariables(datasetId),
                     datasetService.getMergedDatasetData(datasetId)
@@ -99,10 +110,31 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
         }
     }, [datasetId]);
 
+    // Notify parent when visualization data changes
+    useEffect(() => {
+        if (onVisualizationUpdate && visualizationData) {
+            onVisualizationUpdate(visualizationData);
+        }
+    }, [visualizationData, onVisualizationUpdate]);
+
+    // ✅ NEW: Update variable types when variables change
+    useEffect(() => {
+        if (variable1) {
+            const attr = getAvailableAttributes.find(attr => attr.name === variable1);
+            setVariable1Type(attr?.type || "");
+        }
+    }, [variable1]);
+
+    useEffect(() => {
+        if (variable2) {
+            const attr = getAvailableAttributes.find(attr => attr.name === variable2);
+            setVariable2Type(attr?.type || "");
+        }
+    }, [variable2]);
+
     // Get available attributes from backend or fallback to predefined list
     const getAvailableAttributes = useMemo(() => {
         if (availableVariables?.variables?.all) {
-            // Use backend data if available
             return Object.entries(availableVariables.variables.all)
                 .map(([name, variable]) => ({
                     name,
@@ -113,8 +145,6 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
                 }))
                 .filter(attr => PREDEFINED_ATTRIBUTES.some(predefined => predefined.name === attr.name));
         }
-
-        // Fallback to predefined list
         return PREDEFINED_ATTRIBUTES;
     }, [availableVariables]);
 
@@ -132,7 +162,7 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
         return attribute?.type || "unknown";
     };
 
-    // ✅ CORRECT: Client-side visualization generation
+    // ✅ MODIFIED: Use selected types instead of auto-detection
     const handleGenerateGraph = async () => {
         if (!variable1 || !variable2) {
             setError("Please select both variables");
@@ -148,8 +178,8 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
         setError(null);
 
         try {
-            // ✅ CORRECT: Generate visualization entirely on client-side
-            const plotData = generateClientSideVisualization(variable1, variable2, mergedDatasetData);
+            // ✅ MODIFIED: Use selected types
+            const plotData = generateClientSideVisualization(variable1, variable2, mergedDatasetData, variable1Type, variable2Type);
             setVisualizationData(plotData);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
@@ -159,11 +189,8 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
         }
     };
 
-    // ✅ NEW: Client-side visualization generation
-    const generateClientSideVisualization = (var1: string, var2: string, data: any[]) => {
-        const type1 = getVariableType(var1);
-        const type2 = getVariableType(var2);
-
+    // ✅ MODIFIED: Accept explicit types
+    const generateClientSideVisualization = (var1: string, var2: string, data: any[], type1: string, type2: string) => {
         // Filter data to only include rows where both variables have values
         const validData = data.filter(row =>
             row[var1] !== null && row[var1] !== undefined &&
@@ -215,11 +242,9 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
                 break;
 
             case "bar":
-                // For categorical vs numerical, create bar chart
                 const categoricalVar = type1 === "categorical" ? var1 : var2;
                 const numericalVar = type1 === "numerical" ? var1 : var2;
 
-                // Group by categorical variable and calculate mean of numerical variable
                 const groupedData = validData.reduce((acc: any, row) => {
                     const category = row[categoricalVar];
                     if (!acc[category]) {
@@ -253,7 +278,6 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
                 break;
 
             case "heatmap":
-                // For categorical vs categorical, create heatmap
                 const uniqueVar1 = [...new Set(validData.map(row => row[var1]))];
                 const uniqueVar2 = [...new Set(validData.map(row => row[var2]))];
 
@@ -282,7 +306,6 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
                 break;
 
             case "line":
-                // For datetime variables, create line chart
                 const sortedData = validData.sort((a, b) => {
                     const dateA = new Date(a[type1 === "datetime" ? var1 : var2]);
                     const dateB = new Date(b[type1 === "datetime" ? var1 : var2]);
@@ -333,104 +356,96 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
         };
     };
 
-    // Render searchable select component
-    const renderSearchableSelect = (
-        value: string,
-        onChange: (value: string) => void,
+    // ✅ NEW: Render variable selection section
+    const renderVariableSection = (
+        variable: string,
+        setVariable: (value: string) => void,
+        variableType: string,
+        setVariableType: (value: string) => void,
         searchTerm: string,
-        onSearchChange: (value: string) => void,
-        placeholder: string,
+        setSearchTerm: (value: string) => void,
         label: string
     ) => (
-        <div className="space-y-2">
-            <Label htmlFor={`${label.toLowerCase()}-select`}>{label}</Label>
-            <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                    placeholder={placeholder}
-                    value={searchTerm}
-                    onChange={(e) => onSearchChange(e.target.value)}
-                    className="pl-10"
-                />
-                {searchTerm && (
-                    <div className="absolute top-full left-0 right-0 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto z-50">
-                        {getFilteredAttributes(searchTerm).map((attr) => (
-                            <div
-                                key={attr.name}
-                                className="px-3 py-2 hover:bg-accent cursor-pointer"
-                                onClick={() => {
-                                    onChange(attr.name);
-                                    onSearchChange("");
-                                }}
-                            >
-                                <div className="flex items-center justify-between">
+        <div className="flex flex-col space-y-2">
+            <Label className="text-sm font-medium">{label}</Label>
+
+            {/* Attribute Selection */}
+            {uiMode === "searchable" ? (
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder={`Search for ${label.toLowerCase()} attribute`}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                    />
+                    {searchTerm && (
+                        <div className="absolute top-full left-0 right-0 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto z-50">
+                            {getFilteredAttributes(searchTerm).map((attr) => (
+                                <div
+                                    key={attr.name}
+                                    className="px-3 py-2 hover:bg-accent cursor-pointer"
+                                    onClick={() => {
+                                        setVariable(attr.name);
+                                        setVariableType(attr.type);
+                                        setSearchTerm("");
+                                    }}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-medium">{attr.label}</span>
+                                        <Badge variant="secondary" className="text-xs">
+                                            {attr.type}
+                                        </Badge>
+                                    </div>
+                                    {attr.description && attr.description.trim() && (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            {attr.description}
+                                        </p>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <Select value={variable} onValueChange={(value) => {
+                    setVariable(value);
+                    const attr = getAvailableAttributes.find(attr => attr.name === value);
+                    setVariableType(attr?.type || "");
+                }}>
+                    <SelectTrigger>
+                        <SelectValue placeholder={`Select ${label.toLowerCase()} attribute`} />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                        {getAvailableAttributes.map((attr) => (
+                            <SelectItem key={attr.name} value={attr.name}>
+                                <div className="flex items-center justify-between w-full">
                                     <span className="font-medium">{attr.label}</span>
-                                    <Badge variant="secondary" className="text-xs">
+                                    <Badge variant="secondary" className="text-xs ml-2">
                                         {attr.type}
                                     </Badge>
                                 </div>
-                                {attr.description && attr.description.trim() && (
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        {attr.description}
-                                    </p>
-                                )}
-                            </div>
+                            </SelectItem>
                         ))}
-                    </div>
-                )}
-            </div>
-        </div>
-    );
+                    </SelectContent>
+                </Select>
+            )}
 
-    // Render dropdown select component
-    const renderDropdownSelect = (
-        value: string,
-        onChange: (value: string) => void,
-        placeholder: string,
-        label: string
-    ) => (
-        <div className="space-y-2">
-            <Label htmlFor={`${label.toLowerCase()}-select`}>{label}</Label>
-            <Select value={value} onValueChange={onChange}>
-                <SelectTrigger id={`${label.toLowerCase()}-select`} className="w-full">
-                    <SelectValue placeholder={placeholder} />
+            {/* Data Type Selection */}
+            <Select value={variableType} onValueChange={setVariableType}>
+                <SelectTrigger>
+                    <SelectValue placeholder="Select data type" />
                 </SelectTrigger>
-                <SelectContent className="max-h-60">
-                    {getAvailableAttributes.map((attr) => (
-                        <SelectItem key={attr.name} value={attr.name}>
-                            <div className="flex items-center justify-between w-full">
-                                <span className="font-medium">{attr.label}</span>
-                                <Badge variant="secondary" className="text-xs ml-2">
-                                    {attr.type}
-                                </Badge>
-                            </div>
+                <SelectContent>
+                    {DATA_TYPES.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                            {type.label}
                         </SelectItem>
                     ))}
                 </SelectContent>
             </Select>
         </div>
     );
-
-    // Render data type indicator
-    const renderDataTypeIndicator = (variableName: string, label: string) => {
-        const dataType = getVariableType(variableName);
-        const typeColors = {
-            numerical: "bg-blue-100 text-blue-800",
-            categorical: "bg-green-100 text-green-800",
-            binary: "bg-purple-100 text-purple-800",
-            datetime: "bg-orange-100 text-orange-800",
-            unknown: "bg-gray-100 text-gray-800"
-        };
-
-        return (
-            <div className="space-y-1">
-                <Label className="text-sm font-medium">{label} Data Type</Label>
-                <div className={`px-3 py-2 rounded-md text-sm font-medium ${typeColors[dataType as keyof typeof typeColors] || typeColors.unknown}`}>
-                    {dataType.charAt(0).toUpperCase() + dataType.slice(1)}
-                </div>
-            </div>
-        );
-    };
 
     if (isLoading) {
         return (
@@ -457,12 +472,13 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
         );
     }
 
+    // ✅ MODIFIED: New layout with side-by-side variables
     return (
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <BarChart3 className="h-5 w-5" />
-                    Bivariate Visualization
+                    Variable Selection
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -487,54 +503,32 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
                     </div>
                 </div>
 
-                {/* Variable Selection */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Variable 1 */}
-                    <div className="space-y-4">
-                        {uiMode === "searchable" ? (
-                            renderSearchableSelect(
-                                variable1,
-                                setVariable1,
-                                searchTerm1,
-                                setSearchTerm1,
-                                "Search for first variable",
-                                "Variable 1"
-                            )
-                        ) : (
-                            renderDropdownSelect(
-                                variable1,
-                                setVariable1,
-                                "Select first variable",
-                                "Variable 1"
-                            )
+                {/* ✅ NEW: Side-by-side variable selection */}
+                <div className="flex flex-row gap-6">
+                    {/* Variable A */}
+                    <div className="flex-1">
+                        {renderVariableSection(
+                            variable1,
+                            setVariable1,
+                            variable1Type,
+                            setVariable1Type,
+                            searchTerm1,
+                            setSearchTerm1,
+                            "Variable A"
                         )}
-
-                        {/* Data Type Indicator */}
-                        {variable1 && renderDataTypeIndicator(variable1, "Variable 1")}
                     </div>
 
-                    {/* Variable 2 */}
-                    <div className="space-y-4">
-                        {uiMode === "searchable" ? (
-                            renderSearchableSelect(
-                                variable2,
-                                setVariable2,
-                                searchTerm2,
-                                setSearchTerm2,
-                                "Search for second variable",
-                                "Variable 2"
-                            )
-                        ) : (
-                            renderDropdownSelect(
-                                variable2,
-                                setVariable2,
-                                "Select second variable",
-                                "Variable 2"
-                            )
+                    {/* Variable B */}
+                    <div className="flex-1">
+                        {renderVariableSection(
+                            variable2,
+                            setVariable2,
+                            variable2Type,
+                            setVariable2Type,
+                            searchTerm2,
+                            setSearchTerm2,
+                            "Variable B"
                         )}
-
-                        {/* Data Type Indicator */}
-                        {variable2 && renderDataTypeIndicator(variable2, "Variable 2")}
                     </div>
                 </div>
 
@@ -559,42 +553,6 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
                         )}
                     </Button>
                 </div>
-
-                {/* Visualization Display */}
-                {visualizationData && (
-                    <div className="mt-6">
-                        <div className="bg-muted/50 rounded-lg p-4 mb-4">
-                            <h4 className="font-medium mb-2">Visualization Results</h4>
-                            <p className="text-sm text-muted-foreground">
-                                {visualizationData.variable1} vs {visualizationData.variable2} - {visualizationData.chartType} chart
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                                Data points: {visualizationData.dataPoints}
-                            </p>
-                        </div>
-
-                        {visualizationData.plotlyConfig && (
-                            <div className="border rounded-lg p-4">
-                                <Plot
-                                    data={visualizationData.plotlyConfig.data}
-                                    layout={visualizationData.plotlyConfig.layout}
-                                    config={{ responsive: true }}
-                                    className="w-full"
-                                />
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* Placeholder when no visualization */}
-                {!visualizationData && variable1 && variable2 && (
-                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
-                        <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <p className="text-muted-foreground">
-                            Click "Generate Graph" to visualize the relationship between {variable1} and {variable2}
-                        </p>
-                    </div>
-                )}
             </CardContent>
         </Card>
     );

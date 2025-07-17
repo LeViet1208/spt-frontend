@@ -133,6 +133,9 @@ export default function DatasetDetailView({ params }: DatasetDetailViewProps) {
     </div>
   );
 
+  // ✅ NEW: State for bivariate visualization data
+  const [bivariateVisualizationData, setBivariateVisualizationData] = useState<any>(null);
+
   return (
     <div className="flex h-full overflow-hidden">
       {/* Left Column: Chart Display Area - Full Height */}
@@ -324,18 +327,51 @@ export default function DatasetDetailView({ params }: DatasetDetailViewProps) {
           )}
 
           {activeTab === "bivariate" && (
-            <Card className="w-full h-full flex-1 flex items-center justify-center">
-              <CardContent>
-                <div className="text-center space-y-4">
-                  <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
-                    <TrendingUp className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-semibold">Bivariate Analysis</h3>
-                    <p className="text-sm text-muted-foreground">
+            <Card className="w-full h-full flex-1 flex flex-col">
+              <CardContent className="flex-1 flex flex-col">
+                {/* ✅ MODIFIED: Simplified instructional text at the top */}
+                <div className="mb-4">
+                  <div className="text-left space-y-1">
+                    <h3 className="text-sm font-medium text-muted-foreground">Bivariate Analysis</h3>
+                    <p className="text-xs text-muted-foreground">
                       Configure your variables in the right panel and generate a visualization to explore relationships between two variables.
                     </p>
                   </div>
+                </div>
+
+                {/* ✅ MODIFIED: Visualization area below instructional text */}
+                <div className="flex-1">
+                  {bivariateVisualizationData ? (
+                    <div className="space-y-4">
+                      <div className="bg-muted/50 rounded-lg p-4">
+                        <h4 className="font-medium mb-2">Visualization Results</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {bivariateVisualizationData.variable1} vs {bivariateVisualizationData.variable2} - {bivariateVisualizationData.chartType} chart
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Data points: {bivariateVisualizationData.dataPoints}
+                        </p>
+                      </div>
+
+                      {bivariateVisualizationData.plotlyConfig && (
+                        <div className="border rounded-lg p-4">
+                          <Plot
+                            data={bivariateVisualizationData.plotlyConfig.data}
+                            layout={bivariateVisualizationData.plotlyConfig.layout}
+                            config={{ responsive: true }}
+                            className="w-full"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
+                      <BarChart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">
+                        Select variables and click "Generate Graph" to visualize relationships
+                      </p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -517,7 +553,10 @@ export default function DatasetDetailView({ params }: DatasetDetailViewProps) {
           {/* Bivariate Analysis Controls - Only show for bivariate analysis */}
           {activeTab === "bivariate" && (
             <div className="space-y-4">
-              <EnhancedBivariateVisualization datasetId={datasetId || ""} />
+              <EnhancedBivariateVisualization
+                datasetId={datasetId || ""}
+                onVisualizationUpdate={setBivariateVisualizationData} // ✅ NEW: Callback
+              />
             </div>
           )}
         </div>
