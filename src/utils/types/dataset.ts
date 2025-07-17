@@ -52,7 +52,7 @@ export interface DatasetBackendResponse {
 	name: string;
 	description?: string;
 	created_at: number;
-	status: "uploading" | "analyzing" | "completed" | "failed"; // Simplified status
+	status: "uploading" | "analyzing" | "completed" | "failed";
 	campaigns_count: number;
 	metrics?: {
 		total_transactions: number;
@@ -196,7 +196,7 @@ export interface FileRequirement {
 	acceptedFormats: string[];
 }
 
-// Merged dataset visualization types
+// Enhanced merged dataset visualization types
 export interface MergedVariable {
     name: string;
     type: "numerical" | "categorical" | "datetime";
@@ -204,6 +204,12 @@ export interface MergedVariable {
     source_table: string;
     high_cardinality: boolean;
     join_key: boolean;
+    unique_count?: number;
+    min?: number;
+    max?: number;
+    mean?: number;
+    median?: number;
+    std?: number;
 }
 
 export interface MergedVariableInfo {
@@ -211,13 +217,42 @@ export interface MergedVariableInfo {
 }
 
 export interface MergedVariablesResponse {
-    variables: MergedVariableInfo;
+    variables: {
+        numerical: MergedVariableInfo;
+        categorical: MergedVariableInfo;
+        datetime: MergedVariableInfo;
+        all: MergedVariableInfo;
+    };
     count: number;
     types: {
         numerical: string[];
         categorical: string[];
         datetime: string[];
     };
+}
+
+export interface EnhancedMergedVariablesResponse {
+    variables: {
+        numerical: MergedVariableInfo;
+        categorical: MergedVariableInfo;
+        datetime: MergedVariableInfo;
+        all: MergedVariableInfo;
+    };
+    meaningful_pairs: MeaningfulPair[];
+    count: number;
+    types: {
+        numerical: string[];
+        categorical: string[];
+        datetime: string[];
+    };
+}
+
+export interface MeaningfulPair {
+    variable1: string;
+    variable2: string;
+    description: string;
+    category: string;
+    confidence: number;
 }
 
 export interface MergedVisualizationRequest {

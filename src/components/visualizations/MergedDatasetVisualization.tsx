@@ -7,11 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RefreshCw, BarChart3, AlertCircle, Filter, Settings, Info } from "lucide-react";
+import { RefreshCw, BarChart3, AlertCircle, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { useMergedVisualization } from "@/hooks/useMergedVisualization";
-import { MergedVisualizationRequest } from "@/utils/types/dataset";
+import { MergedVisualizationRequest, MergedVisualizationPayload } from "@/utils/types/dataset";
 import dynamic from "next/dynamic";
+import { validateVariableName, createSafeSelectOptions, createSafeSelectItems } from "@/utils/validation";
 
 // Dynamically import Plot to avoid SSR issues
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
@@ -33,7 +33,6 @@ export const MergedDatasetVisualization: React.FC<MergedDatasetVisualizationProp
         fetchAvailableVariables,
         clearError,
         getVariablesByType,
-        getVariableInfo,
     } = useMergedVisualization(datasetId);
 
     const [variable1, setVariable1] = useState("");
@@ -41,8 +40,8 @@ export const MergedDatasetVisualization: React.FC<MergedDatasetVisualizationProp
     const [chartType, setChartType] = useState("");
     const [limit, setLimit] = useState(1000);
     const [aggregation, setAggregation] = useState("");
-    const [filters, setFilters] = useState<Record<string, any>>({});
     const [showFilters, setShowFilters] = useState(false);
+    const [filters, setFilters] = useState<Record<string, any>>({});
 
     // Load available variables on mount
     useEffect(() => {
@@ -53,14 +52,14 @@ export const MergedDatasetVisualization: React.FC<MergedDatasetVisualizationProp
     useEffect(() => {
         if (availableVariables && !variable1) {
             const numericalVars = getVariablesByType("numerical");
-            if (numericalVars.length > 0) {
+            if (numericalVars.length > 0 && numericalVars[0] && numericalVars[0].name) {
                 setVariable1(numericalVars[0].name);
             }
         }
 
         if (availableVariables && !variable2) {
             const categoricalVars = getVariablesByType("categorical");
-            if (categoricalVars.length > 0) {
+            if (categoricalVars.length > 0 && categoricalVars[0] && categoricalVars[0].name) {
                 setVariable2(categoricalVars[0].name);
             }
         }
@@ -84,26 +83,30 @@ export const MergedDatasetVisualization: React.FC<MergedDatasetVisualizationProp
     const canGenerate = variable1 && variable2 && variable1 !== variable2;
 
     const getVariableOptions = (type: "numerical" | "categorical" | "datetime") => {
-        return getVariablesByType(type).map(varInfo => ({
-            value: varInfo.name,
-            label: `${varInfo.name} (${varInfo.description})`,
-            type: varInfo.type,
-        }));
+        const variables = getVariablesByType(type)
+            .filter(varInfo => varInfo && validateVariableName(varInfo.name))
+            .map(varInfo => ({
+                value: varInfo!.name,
+                label: `${varInfo!.name}${varInfo!.description ? ` (${varInfo!.description})` : ''}`,
+                type: varInfo!.type,
+                description: varInfo!.description || '',
+            }));
+
+        return createSafeSelectOptions(variables);
     };
 
-    const getChartTypeOptions = () => {
-        if (!variable1 || !variable2) return [];
+    const getChartTypeOptions = (): string[] => {
+        if (!variable1 || !variable2 || !availableVariables?.variables?.all) return [];
 
-        const var1Info = getVariableInfo(variable1);
-        const var2Info = getVariableInfo(variable2);
+        const var1Info = availableVariables.variables.all[variable1];
+        const var2Info = availableVariables.variables.all[variable2];
 
         if (!var1Info || !var2Info) return [];
 
-        // Get recommended chart types based on variable types
         const type1 = var1Info.type;
         const type2 = var2Info.type;
 
-        const chartOptions = {
+        const chartOptions: Record<string, string[]> = {
             "numerical-numerical": ["scatter", "heatmap", "bubble"],
             "categorical-numerical": ["box", "violin", "bar"],
             "numerical-categorical": ["box", "violin", "bar"],
@@ -118,13 +121,80 @@ export const MergedDatasetVisualization: React.FC<MergedDatasetVisualizationProp
         return chartOptions[key] || ["scatter"];
     };
 
+    const renderVariableSelect = (variable: string, setVariable: (value: string) => void, label: string) => (
+        <div className="space-y-4">
+            <h4 className="font-medium">{label}</h4>
+            <div className="space-y-2">
+                <Label htmlFor={`variable-${label.toLowerCase().replace(/\s+/g, '-')}`}>Variable</Label>
+                <Select value={variable} onValueChange={setVariable}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select variable" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <div className="max-h-60 overflow-y-auto">
+                            {/* Numerical Variables */}
+                            {getVariableOptions("numerical").length > 0 && (
+                                <div>
+                                    <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
+                                        Numerical Variables
+                                    </div>
+                                    {createSafeSelectItems(getVariableOptions("numerical")).map((option) => (
+                                        <SelectItem key={option.key} value={option.value}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Categorical Variables */}
+                            {getVariableOptions("categorical").length > 0 && (
+                                <div>
+                                    <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
+                                        Categorical Variables
+                                    </div>
+                                    {createSafeSelectItems(getVariableOptions("categorical")).map((option) => (
+                                        <SelectItem key={option.key} value={option.value}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Datetime Variables */}
+                            {getVariableOptions("datetime").length > 0 && (
+                                <div>
+                                    <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
+                                        Datetime Variables
+                                    </div>
+                                    {createSafeSelectItems(getVariableOptions("datetime")).map((option) => (
+                                        <SelectItem key={option.key} value={option.value}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* No variables available */}
+                            {getVariableOptions("numerical").length === 0 &&
+                                getVariableOptions("categorical").length === 0 &&
+                                getVariableOptions("datetime").length === 0 && (
+                                    <SelectItem value="no-variables" disabled>
+                                        No variables available
+                                    </SelectItem>
+                                )}
+                        </div>
+                    </SelectContent>
+                </Select>
+            </div>
+        </div>
+    );
+
     const renderFilters = () => {
         if (!showFilters) return null;
 
         return (
             <div className="space-y-4 p-4 bg-muted rounded-lg">
                 <h4 className="font-medium">Filters</h4>
-                {/* Add filter UI components here */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Example filter for store_id */}
                     <div>
@@ -153,71 +223,14 @@ export const MergedDatasetVisualization: React.FC<MergedDatasetVisualizationProp
                     Merged Dataset Visualization
                 </CardTitle>
                 <CardDescription>
-                    Visualize relationships between any two variables from the merged dataset
+                    Visualize relationships between variables from the merged dataset
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
                 {/* Variable Selection */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Variable 1 */}
-                    <div className="space-y-4">
-                        <h4 className="font-medium">Variable 1</h4>
-                        <div className="space-y-2">
-                            <Label htmlFor="variable1">Variable</Label>
-                            <Select value={variable1} onValueChange={setVariable1}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select variable" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {getVariableOptions("numerical").map((option) => (
-                                        <SelectItem key={option.value} value={option.value}>
-                                            {option.label}
-                                        </SelectItem>
-                                    ))}
-                                    {getVariableOptions("categorical").map((option) => (
-                                        <SelectItem key={option.value} value={option.value}>
-                                            {option.label}
-                                        </SelectItem>
-                                    ))}
-                                    {getVariableOptions("datetime").map((option) => (
-                                        <SelectItem key={option.value} value={option.value}>
-                                            {option.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-
-                    {/* Variable 2 */}
-                    <div className="space-y-4">
-                        <h4 className="font-medium">Variable 2</h4>
-                        <div className="space-y-2">
-                            <Label htmlFor="variable2">Variable</Label>
-                            <Select value={variable2} onValueChange={setVariable2}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select variable" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {getVariableOptions("numerical").map((option) => (
-                                        <SelectItem key={option.value} value={option.value}>
-                                            {option.label}
-                                        </SelectItem>
-                                    ))}
-                                    {getVariableOptions("categorical").map((option) => (
-                                        <SelectItem key={option.value} value={option.value}>
-                                            {option.label}
-                                        </SelectItem>
-                                    ))}
-                                    {getVariableOptions("datetime").map((option) => (
-                                        <SelectItem key={option.value} value={option.value}>
-                                            {option.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
+                    {renderVariableSelect(variable1, setVariable1, "Variable 1")}
+                    {renderVariableSelect(variable2, setVariable2, "Variable 2")}
                 </div>
 
                 {/* Chart Configuration */}
@@ -229,7 +242,7 @@ export const MergedDatasetVisualization: React.FC<MergedDatasetVisualizationProp
                                 <SelectValue placeholder="Auto-select" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">Auto-select</SelectItem>
+                                <SelectItem value="auto">Auto-select</SelectItem>
                                 {getChartTypeOptions().map((chartType) => (
                                     <SelectItem key={chartType} value={chartType}>
                                         {chartType.replace("_", " ").toUpperCase()}
@@ -258,7 +271,7 @@ export const MergedDatasetVisualization: React.FC<MergedDatasetVisualizationProp
                                 <SelectValue placeholder="None" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">None</SelectItem>
+                                <SelectItem value="none">None</SelectItem>
                                 <SelectItem value="mean">Mean</SelectItem>
                                 <SelectItem value="median">Median</SelectItem>
                                 <SelectItem value="sum">Sum</SelectItem>
@@ -269,32 +282,40 @@ export const MergedDatasetVisualization: React.FC<MergedDatasetVisualizationProp
                 </div>
 
                 {/* Filters Toggle */}
-                <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
                     <Button
                         variant="outline"
+                        size="sm"
                         onClick={() => setShowFilters(!showFilters)}
-                        className="flex items-center gap-2"
                     >
-                        <Filter className="h-4 w-4" />
-                        {showFilters ? "Hide" : "Show"} Filters
+                        <Filter className="h-4 w-4 mr-2" />
+                        Filters
+                        {showFilters ? (
+                            <ChevronUp className="h-4 w-4 ml-2" />
+                        ) : (
+                            <ChevronDown className="h-4 w-4 ml-2" />
+                        )}
                     </Button>
+                </div>
 
+                {/* Filters Section */}
+                {renderFilters()}
+
+                {/* Generate Button */}
+                <div className="flex justify-center">
                     <Button
                         onClick={handleGenerateVisualization}
                         disabled={!canGenerate || isLoading}
-                        className="flex items-center gap-2"
+                        className="flex justify-center w-full md:w-auto"
                     >
                         {isLoading ? (
-                            <RefreshCw className="h-4 w-4 animate-spin" />
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                         ) : (
-                            <BarChart3 className="h-4 w-4" />
+                            <BarChart3 className="h-4 w-4 mr-2" />
                         )}
                         Generate Visualization
                     </Button>
                 </div>
-
-                {/* Filters Panel */}
-                {renderFilters()}
 
                 {/* Error Display */}
                 {error && (
@@ -315,42 +336,29 @@ export const MergedDatasetVisualization: React.FC<MergedDatasetVisualizationProp
                     </div>
                 )}
 
+                {/* Loading State */}
+                {isLoadingVariables && (
+                    <div className="p-4 bg-muted rounded-lg text-center">
+                        <RefreshCw className="h-4 w-4 animate-spin mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">Loading available variables...</p>
+                    </div>
+                )}
+
                 {/* Visualization Display */}
                 {visualizationData && (
                     <div className="space-y-4">
-                        {/* Analysis Summary */}
-                        <div className="p-4 bg-muted rounded-lg">
-                            <h4 className="font-medium mb-2">Analysis Summary</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                                <div>
-                                    <span className="font-medium">Chart Type:</span>{" "}
-                                    {visualizationData.visualization.selected_chart}
-                                </div>
-                                <div>
-                                    <span className="font-medium">Data Points:</span>{" "}
-                                    {visualizationData.analysis.relationship.data_points}
-                                </div>
-                                {visualizationData.analysis.relationship.correlation && (
-                                    <div>
-                                        <span className="font-medium">Correlation:</span>{" "}
-                                        {visualizationData.analysis.relationship.correlation.toFixed(3)}
-                                    </div>
-                                )}
-                            </div>
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-semibold">Visualization</h3>
+                            <Badge variant="outline">
+                                {visualizationData.visualization?.selected_chart || "Auto-selected"}
+                            </Badge>
                         </div>
-
-                        {/* Plotly Chart */}
-                        <div className="w-full overflow-hidden rounded-lg border">
+                        <div className="w-full h-[400px]">
                             <Plot
-                                data={visualizationData.visualization.plotly_config.data}
-                                layout={visualizationData.visualization.plotly_config.layout}
-                                config={{
-                                    responsive: true,
-                                    displayModeBar: true,
-                                    displaylogo: false,
-                                    modeBarButtonsToRemove: ["pan2d", "lasso2d"],
-                                }}
-                                style={{ width: "100%" }}
+                                data={visualizationData.visualization?.plotly_config?.data || []}
+                                layout={visualizationData.visualization?.plotly_config?.layout || {}}
+                                config={{ responsive: true }}
+                                style={{ width: "100%", height: "100%" }}
                             />
                         </div>
                     </div>

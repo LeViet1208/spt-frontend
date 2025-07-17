@@ -34,17 +34,17 @@ export const BivariateVisualization: React.FC<BivariateVisualizationProps> = ({
 	const [table2, setTable2] = useState("transactions");
 	const [variable2, setVariable2] = useState("");
 
-	// Set default variables when tables change
+	// Set default variables when tables change - FIXED with proper null checks
 	useEffect(() => {
-		const table1Variables = VARIABLES_BY_TABLE[table1];
-		if (table1Variables && table1Variables.length > 0 && !variable1) {
+		const table1Variables = VARIABLES_BY_TABLE[table1] || [];
+		if (table1Variables.length > 0 && !variable1) {
 			setVariable1(table1Variables[0].key);
 		}
 	}, [table1, variable1]);
 
 	useEffect(() => {
-		const table2Variables = VARIABLES_BY_TABLE[table2];
-		if (table2Variables && table2Variables.length > 0 && !variable2) {
+		const table2Variables = VARIABLES_BY_TABLE[table2] || [];
+		if (table2Variables.length > 0 && !variable2) {
 			setVariable2(table2Variables[0].key);
 		}
 	}, [table2, variable2]);
@@ -64,9 +64,9 @@ export const BivariateVisualization: React.FC<BivariateVisualizationProps> = ({
 
 	const canGenerate = variable1 && variable2 && (table1 !== table2 || variable1 !== variable2);
 
-	// Prepare plot data based on chart type
+	// Prepare plot data based on chart type - FIXED with proper null checks
 	const getPlotData = (): any[] => {
-		if (!visualizationData) return [];
+		if (!visualizationData?.data) return [];
 
 		const { data, chart_type, variable1_info, variable2_info } = visualizationData;
 
@@ -78,7 +78,7 @@ export const BivariateVisualization: React.FC<BivariateVisualizationProps> = ({
 						y: data.map(d => d.y),
 						mode: "markers",
 						type: "scatter",
-						name: `${variable1_info.name} vs ${variable2_info.name}`,
+						name: `${variable1_info?.name || 'Variable 1'} vs ${variable2_info?.name || 'Variable 2'}`,
 						marker: {
 							size: 8,
 							opacity: 0.6,
@@ -113,7 +113,7 @@ export const BivariateVisualization: React.FC<BivariateVisualizationProps> = ({
 						x: data.map(d => d.x),
 						y: data.map(d => d.count || d.y),
 						type: "bar",
-						name: `${variable1_info.name} Distribution`,
+						name: `${variable1_info?.name || 'Variable 1'} Distribution`,
 					},
 				];
 
@@ -124,7 +124,7 @@ export const BivariateVisualization: React.FC<BivariateVisualizationProps> = ({
 						y: data.map(d => d.y),
 						mode: "markers",
 						type: "scatter",
-						name: `${variable1_info.name} vs ${variable2_info.name}`,
+						name: `${variable1_info?.name || 'Variable 1'} vs ${variable2_info?.name || 'Variable 2'}`,
 					},
 				];
 		}
@@ -137,18 +137,17 @@ export const BivariateVisualization: React.FC<BivariateVisualizationProps> = ({
 
 		return {
 			title: {
-				text: `${variable1_info.name} vs ${variable2_info.name}${
-					correlation !== undefined ? ` (r = ${correlation.toFixed(3)})` : ""
-				}`,
+				text: `${variable1_info?.name || 'Variable 1'} vs ${variable2_info?.name || 'Variable 2'}${correlation !== undefined ? ` (r = ${correlation.toFixed(3)})` : ""
+					}`,
 			},
 			xaxis: {
 				title: {
-					text: `${variable1_info.name} (${variable1_info.table})`,
+					text: `${variable1_info?.name || 'Variable 1'} (${variable1_info?.table || 'Unknown'})`,
 				},
 			},
 			yaxis: {
 				title: {
-					text: `${variable2_info.name} (${variable2_info.table})`,
+					text: `${variable2_info?.name || 'Variable 2'} (${variable2_info?.table || 'Unknown'})`,
 				},
 			},
 			height: 500,
@@ -276,7 +275,7 @@ export const BivariateVisualization: React.FC<BivariateVisualizationProps> = ({
 					</div>
 				)}
 
-				{/* Visualization Display */}
+				{/* Visualization Display - FIXED with proper null checks */}
 				{visualizationData && (
 					<div className="space-y-4">
 						<div className="p-4 bg-muted rounded-lg">
@@ -288,7 +287,7 @@ export const BivariateVisualization: React.FC<BivariateVisualizationProps> = ({
 								</div>
 								<div>
 									<span className="font-medium">Data Points:</span>{" "}
-									{visualizationData.data.length}
+									{visualizationData.data?.length || 0}
 								</div>
 								{visualizationData.correlation !== undefined && (
 									<div>

@@ -28,7 +28,7 @@ import { useDataset } from "@/hooks/useDataset";
 import { useDatasetAnalytics } from "@/hooks/useDatasetAnalytics";
 
 // Components
-import { BivariateVisualization } from "@/components/visualizations/BivariateVisualization";
+import { EnhancedBivariateVisualization } from "@/components/visualizations/EnhancedBivariateVisualization";
 
 // Dynamically import Plot with no SSR to avoid "self is not defined" error
 const Plot = dynamic(() => import("react-plotly.js"), {
@@ -324,21 +324,21 @@ export default function DatasetDetailView({ params }: DatasetDetailViewProps) {
           )}
 
           {activeTab === "bivariate" && (
-              <Card className="w-full h-full flex-1 flex items-center justify-center">
-                <CardContent>
-                  <div className="text-center space-y-4">
-                    <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
-                      <TrendingUp className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-lg font-semibold">Bivariate Analysis</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Configure your variables in the right panel and generate a visualization to explore relationships between two variables.
-                      </p>
-                    </div>
+            <Card className="w-full h-full flex-1 flex items-center justify-center">
+              <CardContent>
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
+                    <TrendingUp className="h-8 w-8 text-muted-foreground" />
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold">Bivariate Analysis</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Configure your variables in the right panel and generate a visualization to explore relationships between two variables.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>
@@ -517,7 +517,7 @@ export default function DatasetDetailView({ params }: DatasetDetailViewProps) {
           {/* Bivariate Analysis Controls - Only show for bivariate analysis */}
           {activeTab === "bivariate" && (
             <div className="space-y-4">
-              <BivariateVisualization datasetId={datasetId || ""} />
+              <EnhancedBivariateVisualization datasetId={datasetId || ""} />
             </div>
           )}
         </div>
