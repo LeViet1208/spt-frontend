@@ -373,7 +373,7 @@ export const datasetService = {
         error?: string;
     }> {
         const result = await apiPost<MergedVisualizationPayload>(
-            `/datasets/${datasetId}/merged-visualization`,
+            `/datasets/${datasetId}/merged-visualization/`,  // Added trailing slash
             request
         );
         
@@ -406,7 +406,7 @@ export const datasetService = {
         error?: string;
     }> {
         const result = await apiGet<MergedVisualizationPayload>(
-            `/datasets/${datasetId}/merged-visualization`,
+            `/datasets/${datasetId}/merged-visualization/`,  // Added trailing slash
             { params }
         );
         
@@ -427,11 +427,11 @@ export const datasetService = {
         datasetId: string
     ): Promise<{
         success: boolean;
-        data?: EnhancedMergedVariablesResponse; // Changed from MergedVariablesResponse
+        data?: EnhancedMergedVariablesResponse;
         error?: string;
     }> {
         const result = await apiGet<EnhancedMergedVariablesResponse>(
-            `/datasets/${datasetId}/enhanced-merged-variables`
+            `/datasets/${datasetId}/enhanced-merged-variables/`  // Added trailing slash
         );
         
         if (isApiSuccess(result)) {
@@ -456,7 +456,7 @@ export const datasetService = {
         error?: string;
     }> {
         const result = await apiPost<MergedVisualizationPayload>(
-            `/datasets/${datasetId}/enhanced-merged-visualization`,
+            `/datasets/${datasetId}/enhanced-merged-visualization/`,  // Added trailing slash
             request
         );
         
