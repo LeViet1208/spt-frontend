@@ -12,6 +12,23 @@ import { BarChart3, Search } from "lucide-react";
 import { datasetService } from "@/utils/services/dataset";
 import { EnhancedMergedVariablesResponse } from "@/utils/types/dataset";
 import dynamic from "next/dynamic";
+import {
+    ScatterChart,
+    TrendingUp,
+    Square,
+    Box,
+    Music,
+    CircleDot,
+    AreaChart,
+    Layers,
+    Grid3X3,
+    BarChart,
+    PieChart,
+    TrendingDown, // Use this instead of Stairs
+    Hexagon,
+    BarChartHorizontal // Use this instead of BarChart3 for grouped bar
+} from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Dynamically import Plot to avoid SSR issues
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
@@ -55,6 +72,148 @@ const DATA_TYPES = [
     { value: "datetime", label: "Datetime" },
 ];
 
+interface GraphType {
+    id: string;
+    name: string;
+    icon: React.ComponentType<{ className?: string }>;
+    compatibleTypes: string[][]; // Array of compatible type pairs
+    description: string;
+}
+
+const GRAPH_TYPES: GraphType[] = [
+    {
+        id: "scatter",
+        name: "Scatter Plot",
+        icon: ScatterChart,
+        compatibleTypes: [
+            ["numerical", "numerical"],
+            ["numerical", "categorical"],
+            ["categorical", "numerical"]
+        ],
+        description: "Shows relationship between two variables with individual data points"
+    },
+    {
+        id: "hexbin",
+        name: "2D Histogram",
+        icon: Hexagon,
+        compatibleTypes: [
+            ["numerical", "numerical"]
+        ],
+        description: "Density visualization for numerical data using hexagonal bins"
+    },
+    {
+        id: "box",
+        name: "Box Plot",
+        icon: Box,
+        compatibleTypes: [
+            ["categorical", "numerical"],
+            ["numerical", "categorical"]
+        ],
+        description: "Shows distribution statistics and outliers"
+    },
+    {
+        id: "violin",
+        name: "Violin Plot",
+        icon: Music,
+        compatibleTypes: [
+            ["categorical", "numerical"],
+            ["numerical", "categorical"]
+        ],
+        description: "Shows data distribution shape with density estimation"
+    },
+    {
+        id: "swarm",
+        name: "Strip Plot",
+        icon: CircleDot,
+        compatibleTypes: [
+            ["categorical", "numerical"],
+            ["numerical", "categorical"]
+        ],
+        description: "Shows individual data points with jitter to avoid overlap"
+    },
+    {
+        id: "line",
+        name: "Line Chart",
+        icon: TrendingUp,
+        compatibleTypes: [
+            ["datetime", "numerical"],
+            ["numerical", "datetime"],
+            ["numerical", "numerical"]
+        ],
+        description: "Shows trends over time or continuous relationships"
+    },
+    {
+        id: "area",
+        name: "Area Chart",
+        icon: AreaChart,
+        compatibleTypes: [
+            ["datetime", "numerical"],
+            ["numerical", "datetime"]
+        ],
+        description: "Filled area showing cumulative or stacked values over time"
+    },
+    {
+        id: "grouped_bar",
+        name: "Grouped Bar Chart",
+        icon: BarChartHorizontal, // Changed from BarChart3
+        compatibleTypes: [
+            ["categorical", "categorical"],
+            ["categorical", "numerical"],
+            ["numerical", "categorical"]
+        ],
+        description: "Multiple bars grouped by categories"
+    },
+    {
+        id: "heatmap",
+        name: "Heatmap",
+        icon: Grid3X3,
+        compatibleTypes: [
+            ["categorical", "categorical"],
+            ["numerical", "numerical"]
+        ],
+        description: "Color-coded matrix showing relationships or frequencies"
+    },
+    {
+        id: "stacked_bar",
+        name: "Stacked Bar Chart",
+        icon: Layers,
+        compatibleTypes: [
+            ["categorical", "categorical"],
+            ["categorical", "numerical"]
+        ],
+        description: "Bars with segments showing composition"
+    },
+    {
+        id: "side_by_side",
+        name: "Side-by-side Bar Chart",
+        icon: BarChart,
+        compatibleTypes: [
+            ["categorical", "categorical"],
+            ["categorical", "numerical"]
+        ],
+        description: "Adjacent bars for easy comparison"
+    },
+    {
+        id: "count",
+        name: "Count Plot",
+        icon: PieChart,
+        compatibleTypes: [
+            ["categorical", "categorical"]
+        ],
+        description: "Shows frequency counts for categorical data"
+    },
+    {
+        id: "step",
+        name: "Step Plot",
+        icon: TrendingDown, // Changed from Stairs
+        compatibleTypes: [
+            ["datetime", "numerical"],
+            ["numerical", "datetime"]
+        ],
+        description: "Step-wise line chart for discrete changes"
+    }
+];
+
 export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualizationProps> = ({
     datasetId,
     onVisualizationUpdate,
@@ -73,6 +232,7 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
     const [uiMode, setUiMode] = useState<"dropdown" | "searchable">("dropdown");
     const [searchTerm1, setSearchTerm1] = useState("");
     const [searchTerm2, setSearchTerm2] = useState("");
+    const [selectedGraphType, setSelectedGraphType] = useState<string>("scatter");
 
     // Load available variables and merged dataset data
     useEffect(() => {
@@ -178,7 +338,7 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
         setError(null);
 
         try {
-            const plotData = generateClientSideVisualization(variable1, variable2, mergedDatasetData, variable1Type, variable2Type);
+            const plotData = generateClientSideVisualization(variable1, variable2, mergedDatasetData, variable1Type, variable2Type, selectedGraphType);
             setVisualizationData(plotData);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
@@ -189,7 +349,7 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
     };
 
     // Accept explicit types
-    const generateClientSideVisualization = (var1: string, var2: string, data: any[], type1: string, type2: string) => {
+    const generateClientSideVisualization = (var1: string, var2: string, data: any[], type1: string, type2: string, graphType: string) => {
         // Filter data to only include rows where both variables have values
         const validData = data.filter(row =>
             row[var1] !== null && row[var1] !== undefined &&
@@ -200,18 +360,8 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
             throw new Error("No valid data points found for the selected variables");
         }
 
-        // Determine chart type based on variable types
-        let chartType = "scatter";
-        if (type1 === "numerical" && type2 === "numerical") {
-            chartType = "scatter";
-        } else if ((type1 === "categorical" && type2 === "numerical") ||
-            (type1 === "numerical" && type2 === "categorical")) {
-            chartType = "bar";
-        } else if (type1 === "categorical" && type2 === "categorical") {
-            chartType = "heatmap";
-        } else if (type1 === "datetime" || type2 === "datetime") {
-            chartType = "line";
-        }
+        // Use the selected graph type instead of auto-detection
+        let chartType = graphType;
 
         // Generate Plotly configuration based on chart type
         let plotlyConfig: any = {};
@@ -240,36 +390,177 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
                 };
                 break;
 
-            case "bar":
+            case "hexbin":
+                plotlyConfig = {
+                    data: [{
+                        x: validData.map(row => row[var1]),
+                        y: validData.map(row => row[var2]),
+                        type: "histogram2d",
+                        colorscale: "Viridis",
+                        nbinsx: 20,
+                        nbinsy: 20
+                    }],
+                    layout: {
+                        title: `${var1} vs ${var2} - 2D Histogram`,
+                        xaxis: { title: var1 },
+                        yaxis: { title: var2 },
+                        height: 500,
+                        margin: { t: 50, r: 50, b: 50, l: 50 }
+                    }
+                };
+                break;
+
+            case "box":
                 const categoricalVar = type1 === "categorical" ? var1 : var2;
                 const numericalVar = type1 === "numerical" ? var1 : var2;
+                const categories = [...new Set(validData.map(row => row[categoricalVar]))];
+
+                plotlyConfig = {
+                    data: categories.map(cat => ({
+                        y: validData.filter(row => row[categoricalVar] === cat).map(row => row[numericalVar]),
+                        type: "box",
+                        name: cat,
+                        boxpoints: "outliers"
+                    })),
+                    layout: {
+                        title: `${numericalVar} by ${categoricalVar}`,
+                        xaxis: { title: categoricalVar },
+                        yaxis: { title: numericalVar },
+                        height: 500,
+                        margin: { t: 50, r: 50, b: 50, l: 50 }
+                    }
+                };
+                break;
+
+            case "violin":
+                const catVar = type1 === "categorical" ? var1 : var2;
+                const numVar = type1 === "numerical" ? var1 : var2;
+                const cats = [...new Set(validData.map(row => row[catVar]))];
+
+                plotlyConfig = {
+                    data: cats.map(cat => ({
+                        y: validData.filter(row => row[catVar] === cat).map(row => row[numVar]),
+                        type: "violin",
+                        name: cat,
+                        box: { visible: true },
+                        line: { color: "black" }
+                    })),
+                    layout: {
+                        title: `${numVar} by ${catVar}`,
+                        xaxis: { title: catVar },
+                        yaxis: { title: numVar },
+                        height: 500,
+                        margin: { t: 50, r: 50, b: 50, l: 50 }
+                    }
+                };
+                break;
+
+            case "swarm":
+                const catVarSwarm = type1 === "categorical" ? var1 : var2;
+                const numVarSwarm = type1 === "numerical" ? var1 : var2;
+                const catsSwarm = [...new Set(validData.map(row => row[catVarSwarm]))];
+
+                plotlyConfig = {
+                    data: catsSwarm.map(cat => ({
+                        y: validData.filter(row => row[catVarSwarm] === cat).map(row => row[numVarSwarm]),
+                        type: "scatter",
+                        mode: "markers",
+                        name: cat,
+                        marker: { size: 6, opacity: 0.7 }
+                    })),
+                    layout: {
+                        title: `${numVarSwarm} by ${catVarSwarm}`,
+                        xaxis: { title: catVarSwarm },
+                        yaxis: { title: numVarSwarm },
+                        height: 500,
+                        margin: { t: 50, r: 50, b: 50, l: 50 }
+                    }
+                };
+                break;
+
+            case "line":
+                const sortedData = validData.sort((a, b) => {
+                    const dateA = new Date(a[type1 === "datetime" ? var1 : var2]);
+                    const dateB = new Date(b[type1 === "datetime" ? var1 : var2]);
+                    return dateA.getTime() - dateB.getTime();
+                });
+
+                plotlyConfig = {
+                    data: [{
+                        x: sortedData.map(row => row[type1 === "datetime" ? var1 : var2]),
+                        y: sortedData.map(row => row[type1 === "datetime" ? var2 : var1]),
+                        type: "scatter",
+                        mode: "lines+markers",
+                        line: { color: "rgb(59, 130, 246)" }
+                    }],
+                    layout: {
+                        title: `${var1} vs ${var2}`,
+                        xaxis: { title: type1 === "datetime" ? var1 : var2 },
+                        yaxis: { title: type1 === "datetime" ? var2 : var1 },
+                        height: 500,
+                        margin: { t: 50, r: 50, b: 50, l: 50 }
+                    }
+                };
+                break;
+
+            case "area":
+                const sortedAreaData = validData.sort((a, b) => {
+                    const dateA = new Date(a[type1 === "datetime" ? var1 : var2]);
+                    const dateB = new Date(b[type1 === "datetime" ? var1 : var2]);
+                    return dateA.getTime() - dateB.getTime();
+                });
+
+                plotlyConfig = {
+                    data: [{
+                        x: sortedAreaData.map(row => row[type1 === "datetime" ? var1 : var2]),
+                        y: sortedAreaData.map(row => row[type1 === "datetime" ? var2 : var1]),
+                        type: "scatter",
+                        mode: "lines",
+                        fill: "tonexty",
+                        line: { color: "rgb(59, 130, 246)" }
+                    }],
+                    layout: {
+                        title: `${var1} vs ${var2}`,
+                        xaxis: { title: type1 === "datetime" ? var1 : var2 },
+                        yaxis: { title: type1 === "datetime" ? var2 : var1 },
+                        height: 500,
+                        margin: { t: 50, r: 50, b: 50, l: 50 }
+                    }
+                };
+                break;
+
+            case "grouped_bar":
+            case "stacked_bar":
+            case "side_by_side":
+                const categoricalVarBar = type1 === "categorical" ? var1 : var2;
+                const numericalVarBar = type1 === "numerical" ? var1 : var2;
 
                 const groupedData = validData.reduce((acc: any, row) => {
-                    const category = row[categoricalVar];
+                    const category = row[categoricalVarBar];
                     if (!acc[category]) {
                         acc[category] = { sum: 0, count: 0 };
                     }
-                    acc[category].sum += Number(row[numericalVar]) || 0;
+                    acc[category].sum += Number(row[numericalVarBar]) || 0;
                     acc[category].count += 1;
                     return acc;
                 }, {});
 
-                const categories = Object.keys(groupedData);
-                const values = categories.map(cat => groupedData[cat].sum / groupedData[cat].count);
+                const categoriesBar = Object.keys(groupedData);
+                const valuesBar = categoriesBar.map(cat => groupedData[cat].sum / groupedData[cat].count);
 
                 plotlyConfig = {
                     data: [{
-                        x: categories,
-                        y: values,
+                        x: categoriesBar,
+                        y: valuesBar,
                         type: "bar",
                         marker: {
                             color: "rgb(59, 130, 246)"
                         }
                     }],
                     layout: {
-                        title: `${numericalVar} by ${categoricalVar}`,
-                        xaxis: { title: categoricalVar },
-                        yaxis: { title: `Average ${numericalVar}` },
+                        title: `${numericalVarBar} by ${categoricalVarBar}`,
+                        xaxis: { title: categoricalVarBar },
+                        yaxis: { title: `Average ${numericalVarBar}` },
                         height: 500,
                         margin: { t: 50, r: 50, b: 50, l: 50 }
                     }
@@ -304,8 +595,34 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
                 };
                 break;
 
-            case "line":
-                const sortedData = validData.sort((a, b) => {
+            case "count":
+                const countData = validData.reduce((acc: any, row) => {
+                    const key = `${row[var1]} - ${row[var2]}`;
+                    acc[key] = (acc[key] || 0) + 1;
+                    return acc;
+                }, {});
+
+                plotlyConfig = {
+                    data: [{
+                        x: Object.keys(countData),
+                        y: Object.values(countData),
+                        type: "bar",
+                        marker: {
+                            color: "rgb(59, 130, 246)"
+                        }
+                    }],
+                    layout: {
+                        title: `${var1} vs ${var2} - Count Plot`,
+                        xaxis: { title: "Combination" },
+                        yaxis: { title: "Count" },
+                        height: 500,
+                        margin: { t: 50, r: 50, b: 50, l: 50 }
+                    }
+                };
+                break;
+
+            case "step":
+                const sortedStepData = validData.sort((a, b) => {
                     const dateA = new Date(a[type1 === "datetime" ? var1 : var2]);
                     const dateB = new Date(b[type1 === "datetime" ? var1 : var2]);
                     return dateA.getTime() - dateB.getTime();
@@ -313,11 +630,14 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
 
                 plotlyConfig = {
                     data: [{
-                        x: sortedData.map(row => row[type1 === "datetime" ? var1 : var2]),
-                        y: sortedData.map(row => row[type1 === "datetime" ? var2 : var1]),
+                        x: sortedStepData.map(row => row[type1 === "datetime" ? var1 : var2]),
+                        y: sortedStepData.map(row => row[type1 === "datetime" ? var2 : var1]),
                         type: "scatter",
-                        mode: "lines+markers",
-                        line: { color: "rgb(59, 130, 246)" }
+                        mode: "lines",
+                        line: {
+                            color: "rgb(59, 130, 246)",
+                            shape: "hv" // Step shape
+                        }
                     }],
                     layout: {
                         title: `${var1} vs ${var2}`,
@@ -330,6 +650,7 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
                 break;
 
             default:
+                // Fallback to scatter plot
                 plotlyConfig = {
                     data: [{
                         x: validData.map(row => row[var1]),
@@ -353,6 +674,99 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
             variable1: var1,
             variable2: var2
         };
+    };
+
+    // Add this function to check compatibility
+    const isGraphTypeCompatible = (graphType: GraphType, type1: string, type2: string): boolean => {
+        return graphType.compatibleTypes.some(([t1, t2]) =>
+            (t1 === type1 && t2 === type2) || (t1 === type2 && t2 === type1)
+        );
+    };
+
+    // Add this function to get compatible graph types
+    const getCompatibleGraphTypes = (type1: string, type2: string): GraphType[] => {
+        return GRAPH_TYPES.filter(graphType => isGraphTypeCompatible(graphType, type1, type2));
+    };
+
+    // Add this function to auto-select appropriate graph type when variables change
+    useEffect(() => {
+        if (variable1Type && variable2Type) {
+            const compatibleTypes = getCompatibleGraphTypes(variable1Type, variable2Type);
+            if (compatibleTypes.length > 0) {
+                // Auto-select the first compatible type, or keep current if still compatible
+                const isCurrentCompatible = compatibleTypes.some(gt => gt.id === selectedGraphType);
+                if (!isCurrentCompatible) {
+                    setSelectedGraphType(compatibleTypes[0].id);
+                }
+            }
+        }
+    }, [variable1Type, variable2Type, selectedGraphType]);
+
+    // Add this function to render the graph type selection section
+    const renderGraphTypeSelection = () => {
+        if (!variable1Type || !variable2Type) {
+            return null;
+        }
+
+        const compatibleTypes = getCompatibleGraphTypes(variable1Type, variable2Type);
+
+        if (compatibleTypes.length === 0) {
+            return (
+                <div className="w-full max-w-[160px]">
+                    <div className="text-center p-3 text-sm text-muted-foreground bg-muted/30 rounded-md">
+                        No compatible graph types for {variable1Type} vs {variable2Type}
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div className="w-full max-w-[160px]">
+                <Label className="text-sm font-medium mb-3 block">Graph Type</Label>
+                <TooltipProvider>
+                    <div className="grid grid-cols-2 gap-2">
+                        {GRAPH_TYPES.map((graphType) => {
+                            const isCompatible = isGraphTypeCompatible(graphType, variable1Type, variable2Type);
+                            const isSelected = selectedGraphType === graphType.id;
+                            const IconComponent = graphType.icon;
+
+                            if (!isCompatible) {
+                                return null; // Hide incompatible types
+                            }
+
+                            return (
+                                <Tooltip key={graphType.id}>
+                                    <TooltipTrigger asChild>
+                                        <button
+                                            onClick={() => setSelectedGraphType(graphType.id)}
+                                            className={`
+                                                p-2 rounded-md border transition-all duration-200
+                                                ${isSelected
+                                                    ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                                                    : 'bg-background hover:bg-accent border-border hover:border-primary/50'
+                                                }
+                                                ${!isCompatible ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                                            `}
+                                            disabled={!isCompatible}
+                                        >
+                                            <IconComponent className="h-4 w-4 mx-auto" />
+                                        </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-xs">
+                                        <div className="text-center">
+                                            <p className="font-medium">{graphType.name}</p>
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                {graphType.description}
+                                            </p>
+                                        </div>
+                                    </TooltipContent>
+                                </Tooltip>
+                            );
+                        })}
+                    </div>
+                </TooltipProvider>
+            </div>
+        );
     };
 
     // Render variable selection section
@@ -547,6 +961,11 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
                             "Variable B"
                         )}
                     </div>
+                </div>
+
+                {/* ✅ NEW: Graph Type Selection Section */}
+                <div className="flex justify-center">
+                    {renderGraphTypeSelection()}
                 </div>
 
                 {/* Generate Graph Button */}
