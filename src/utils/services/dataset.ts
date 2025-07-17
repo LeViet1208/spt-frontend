@@ -308,29 +308,24 @@ export const datasetService = {
 		}
 	},
 
-	async getBivariateVisualization(
+	async getMergedDatasetData(
 		datasetId: string,
-		table1: string,
-		variable1: string,
-		table2: string,
-		variable2: string
+		limit: number = 10000
 	): Promise<{
 		success: boolean;
-		data?: BivariateVisualizationPayload;
+		data?: { data: any[]; total_rows: number; columns: string[] };
 		error?: string;
 	}> {
-		const result = await apiGet<BivariateVisualizationPayload>(
-			`/datasets/${datasetId}/visualizations/bivariate`,
+		const result = await apiGet<{ data: any[]; total_rows: number; columns: string[] }>(
+			`/datasets/${datasetId}/merged/data/`,
 			{
 				params: {
-					table1,
-					variable1,
-					table2,
-					variable2,
-				},
+					limit,
+					format: "json"
+				}
 			}
 		);
-
+		
 		if (isApiSuccess(result)) {
 			return {
 				success: true,
@@ -344,132 +339,27 @@ export const datasetService = {
 		}
 	},
 
-	async getMergedVariables(): Promise<{
-        success: boolean;
-        data?: MergedVariablesResponse;
-        error?: string;
-    }> {
-        const result = await apiGet<MergedVariablesResponse>("/merged-variables");
-        
-        if (isApiSuccess(result)) {
-            return {
-                success: true,
-                data: result.payload,
-            };
-        } else {
-            return {
-                success: false,
-                error: result.message,
-            };
-        }
-    },
-    
-    async getMergedVisualization(
-        datasetId: string,
-        request: MergedVisualizationRequest
-    ): Promise<{
-        success: boolean;
-        data?: MergedVisualizationPayload;
-        error?: string;
-    }> {
-        const result = await apiPost<MergedVisualizationPayload>(
-            `/datasets/${datasetId}/merged-visualization/`,  // Added trailing slash
-            request
-        );
-        
-        if (isApiSuccess(result)) {
-            return {
-                success: true,
-                data: result.payload,
-            };
-        } else {
-            return {
-                success: false,
-                error: result.message,
-            };
-        }
-    },
-    
-    async getMergedVisualizationGET(
-        datasetId: string,
-        params: {
-            variable1: string;
-            variable2: string;
-            chart_type?: string;
-            limit?: number;
-            aggregation?: string;
-            filters?: string;
-        }
-    ): Promise<{
-        success: boolean;
-        data?: MergedVisualizationPayload;
-        error?: string;
-    }> {
-        const result = await apiGet<MergedVisualizationPayload>(
-            `/datasets/${datasetId}/merged-visualization/`,  // Added trailing slash
-            { params }
-        );
-        
-        if (isApiSuccess(result)) {
-            return {
-                success: true,
-                data: result.payload,
-            };
-        } else {
-            return {
-                success: false,
-                error: result.message,
-            };
-        }
-    },
-
-    async getEnhancedMergedVariables(
-        datasetId: string
-    ): Promise<{
-        success: boolean;
-        data?: EnhancedMergedVariablesResponse;
-        error?: string;
-    }> {
-        const result = await apiGet<EnhancedMergedVariablesResponse>(
-            `/datasets/${datasetId}/enhanced-merged-variables/`  // Added trailing slash
-        );
-        
-        if (isApiSuccess(result)) {
-            return {
-                success: true,
-                data: result.payload,
-            };
-        } else {
-            return {
-                success: false,
-                error: result.message,
-            };
-        }
-    },
-
-    async getEnhancedMergedVisualization(
-        datasetId: string,
-        request: MergedVisualizationRequest
-    ): Promise<{
-        success: boolean;
-        data?: MergedVisualizationPayload;
-        error?: string;
-    }> {
-        const result = await apiPost<MergedVisualizationPayload>(
-            `/datasets/${datasetId}/enhanced-merged-visualization/`,  // Added trailing slash
-            request
-        );
-        
-        if (isApiSuccess(result)) {
-            return {
-                success: true,
-                data: result.payload,
-            };
-        } else {
-            return {
-                success: false,
-                error: result.message,
-            };
-        }
-    },
+	async getEnhancedMergedVariables(
+		datasetId: string
+	): Promise<{
+		success: boolean;
+		data?: EnhancedMergedVariablesResponse;
+		error?: string;
+	}> {
+		const result = await apiGet<EnhancedMergedVariablesResponse>(
+			`/datasets/${datasetId}/enhanced-merged-variables/`
+		);
+		
+		if (isApiSuccess(result)) {
+			return {
+				success: true,
+				data: result.payload,
+			};
+		} else {
+			return {
+				success: false,
+				error: result.message,
+			};
+		}
+	},
 };
