@@ -47,7 +47,7 @@ const PREDEFINED_ATTRIBUTES = [
     { name: "end_time", type: "datetime", label: "End Time", description: "End time of the promotion period" },
 ];
 
-// ✅ NEW: Data type options for the dropdown
+// Data type options for the dropdown
 const DATA_TYPES = [
     { value: "numerical", label: "Numerical" },
     { value: "categorical", label: "Categorical" },
@@ -63,8 +63,8 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
     const [mergedDatasetData, setMergedDatasetData] = useState<any[]>([]);
     const [variable1, setVariable1] = useState<string>("");
     const [variable2, setVariable2] = useState<string>("");
-    const [variable1Type, setVariable1Type] = useState<string>(""); // ✅ NEW: Type for variable 1
-    const [variable2Type, setVariable2Type] = useState<string>(""); // ✅ NEW: Type for variable 2
+    const [variable1Type, setVariable1Type] = useState<string>("");
+    const [variable2Type, setVariable2Type] = useState<string>("");
     const [isLoading, setIsLoading] = useState(false);
     const [isLoadingData, setIsLoadingData] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -117,7 +117,7 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
         }
     }, [visualizationData, onVisualizationUpdate]);
 
-    // ✅ NEW: Update variable types when variables change
+    // Update variable types when variables change
     useEffect(() => {
         if (variable1) {
             const attr = getAvailableAttributes.find(attr => attr.name === variable1);
@@ -162,7 +162,7 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
         return attribute?.type || "unknown";
     };
 
-    // ✅ MODIFIED: Use selected types instead of auto-detection
+    // Use selected types instead of auto-detection
     const handleGenerateGraph = async () => {
         if (!variable1 || !variable2) {
             setError("Please select both variables");
@@ -178,7 +178,6 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
         setError(null);
 
         try {
-            // ✅ MODIFIED: Use selected types
             const plotData = generateClientSideVisualization(variable1, variable2, mergedDatasetData, variable1Type, variable2Type);
             setVisualizationData(plotData);
         } catch (err) {
@@ -189,7 +188,7 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
         }
     };
 
-    // ✅ MODIFIED: Accept explicit types
+    // Accept explicit types
     const generateClientSideVisualization = (var1: string, var2: string, data: any[], type1: string, type2: string) => {
         // Filter data to only include rows where both variables have values
         const validData = data.filter(row =>
@@ -356,7 +355,7 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
         };
     };
 
-    // ✅ NEW: Render variable selection section
+    // Render variable selection section
     const renderVariableSection = (
         variable: string,
         setVariable: (value: string) => void,
@@ -365,87 +364,103 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
         searchTerm: string,
         setSearchTerm: (value: string) => void,
         label: string
-    ) => (
-        <div className="flex flex-col space-y-2">
-            <Label className="text-sm font-medium">{label}</Label>
+    ) => {
+        // Get the selected attribute details for display
+        const selectedAttribute = getAvailableAttributes.find(attr => attr.name === variable);
+        const displayName = selectedAttribute?.label || variable;
 
-            {/* Attribute Selection */}
-            {uiMode === "searchable" ? (
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder={`Search for ${label.toLowerCase()} attribute`}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10"
-                    />
-                    {searchTerm && (
-                        <div className="absolute top-full left-0 right-0 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto z-50">
-                            {getFilteredAttributes(searchTerm).map((attr) => (
-                                <div
-                                    key={attr.name}
-                                    className="px-3 py-2 hover:bg-accent cursor-pointer"
-                                    onClick={() => {
-                                        setVariable(attr.name);
-                                        setVariableType(attr.type);
-                                        setSearchTerm("");
-                                    }}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <span className="font-medium">{attr.label}</span>
-                                        <Badge variant="secondary" className="text-xs">
-                                            {attr.type}
-                                        </Badge>
+        return (
+            <div className="flex flex-col space-y-3 w-full">
+                <Label className="text-sm font-medium truncate">{label}</Label>
+
+                {/* Attribute Selection */}
+                {uiMode === "searchable" ? (
+                    <div className="relative w-full max-w-[160px]">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder={`Search ${label.toLowerCase()}`}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10 text-sm w-full"
+                        />
+                        {searchTerm && (
+                            <div className="absolute top-full left-0 right-0 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto z-50 w-full max-w-[160px]">
+                                {getFilteredAttributes(searchTerm).map((attr) => (
+                                    <div
+                                        key={attr.name}
+                                        className="px-3 py-2 hover:bg-accent cursor-pointer"
+                                        onClick={() => {
+                                            setVariable(attr.name);
+                                            setVariableType(attr.type);
+                                            setSearchTerm("");
+                                        }}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-medium text-sm truncate flex-1">{attr.label}</span>
+                                            <Badge variant="secondary" className="text-xs ml-2 flex-shrink-0">
+                                                {attr.type}
+                                            </Badge>
+                                        </div>
+                                        {attr.description && attr.description.trim() && (
+                                            <p className="text-xs text-muted-foreground mt-1 truncate">
+                                                {attr.description}
+                                            </p>
+                                        )}
                                     </div>
-                                    {attr.description && attr.description.trim() && (
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            {attr.description}
-                                        </p>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="w-full max-w-[160px]">
+                        <Select value={variable} onValueChange={(value) => {
+                            setVariable(value);
+                            const attr = getAvailableAttributes.find(attr => attr.name === value);
+                            setVariableType(attr?.type || "");
+                        }}>
+                            <SelectTrigger className="text-sm w-full">
+                                <SelectValue
+                                    placeholder={`Select ${label.toLowerCase()}`}
+                                    className="truncate"
+                                >
+                                    {variable && (
+                                        <span className="truncate" title={displayName}>
+                                            {displayName}
+                                        </span>
                                     )}
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            ) : (
-                <Select value={variable} onValueChange={(value) => {
-                    setVariable(value);
-                    const attr = getAvailableAttributes.find(attr => attr.name === value);
-                    setVariableType(attr?.type || "");
-                }}>
-                    <SelectTrigger>
-                        <SelectValue placeholder={`Select ${label.toLowerCase()} attribute`} />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-60">
-                        {getAvailableAttributes.map((attr) => (
-                            <SelectItem key={attr.name} value={attr.name}>
-                                <div className="flex items-center justify-between w-full">
-                                    <span className="font-medium">{attr.label}</span>
-                                    <Badge variant="secondary" className="text-xs ml-2">
-                                        {attr.type}
-                                    </Badge>
-                                </div>
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            )}
+                                </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent className="max-h-60 w-[160px]">
+                                {getAvailableAttributes.map((attr) => (
+                                    <SelectItem key={attr.name} value={attr.name} className="text-sm">
+                                        <div className="flex items-center justify-between w-full">
+                                            <span className="font-medium truncate flex-1">{attr.label}</span>
+                                            <Badge variant="secondary" className="text-xs ml-2 flex-shrink-0">
+                                                {attr.type}
+                                            </Badge>
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
 
-            {/* Data Type Selection */}
-            <Select value={variableType} onValueChange={setVariableType}>
-                <SelectTrigger>
-                    <SelectValue placeholder="Select data type" />
-                </SelectTrigger>
-                <SelectContent>
-                    {DATA_TYPES.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </div>
-    );
+                {/* Type Indicator Bar - Read-only display */}
+                <div className="w-full max-w-[160px]">
+                    <div className="flex items-center justify-between px-3 py-2 text-sm bg-muted/50 border border-border rounded-md">
+                        <span className="font-medium text-muted-foreground">Type:</span>
+                        <Badge
+                            variant="outline"
+                            className="text-xs font-medium"
+                        >
+                            {variableType || "Not selected"}
+                        </Badge>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     if (isLoading) {
         return (
@@ -472,16 +487,16 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
         );
     }
 
-    // ✅ MODIFIED: New layout with side-by-side variables
+    // ✅ REFINED: Enhanced dropdown display with read-only type indicators
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+        <Card className="overflow-hidden">
+            <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-base">
                     <BarChart3 className="h-5 w-5" />
                     Variable Selection
                 </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 overflow-x-hidden">
                 {/* UI Mode Toggle */}
                 <div className="flex items-center justify-between">
                     <Label className="text-sm font-medium">Selection Mode</Label>
@@ -490,6 +505,7 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
                             variant={uiMode === "dropdown" ? "default" : "outline"}
                             size="sm"
                             onClick={() => setUiMode("dropdown")}
+                            className="text-sm"
                         >
                             Dropdown
                         </Button>
@@ -497,16 +513,17 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
                             variant={uiMode === "searchable" ? "default" : "outline"}
                             size="sm"
                             onClick={() => setUiMode("searchable")}
+                            className="text-sm"
                         >
                             Searchable
                         </Button>
                     </div>
                 </div>
 
-                {/* ✅ NEW: Side-by-side variable selection */}
-                <div className="flex flex-row gap-6">
+                {/* Side-by-side variable selection with read-only type indicators */}
+                <div className="grid grid-cols-2 gap-6">
                     {/* Variable A */}
-                    <div className="flex-1">
+                    <div className="flex justify-center">
                         {renderVariableSection(
                             variable1,
                             setVariable1,
@@ -519,7 +536,7 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
                     </div>
 
                     {/* Variable B */}
-                    <div className="flex-1">
+                    <div className="flex justify-center">
                         {renderVariableSection(
                             variable2,
                             setVariable2,
@@ -533,12 +550,12 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
                 </div>
 
                 {/* Generate Graph Button */}
-                <div className="flex justify-center">
+                <div className="flex justify-center pt-2">
                     <Button
                         onClick={handleGenerateGraph}
                         disabled={!variable1 || !variable2 || isGenerating || mergedDatasetData.length === 0}
-                        className="flex items-center gap-2 px-8 py-3"
-                        size="lg"
+                        className="flex items-center gap-2 px-8 py-2 text-sm"
+                        size="default"
                     >
                         {isGenerating ? (
                             <>
@@ -547,7 +564,7 @@ export const EnhancedBivariateVisualization: React.FC<EnhancedBivariateVisualiza
                             </>
                         ) : (
                             <>
-                                <BarChart3 className="h-5 w-5" />
+                                <BarChart3 className="h-4 w-4" />
                                 Generate Graph
                             </>
                         )}
