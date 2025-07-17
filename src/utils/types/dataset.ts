@@ -195,3 +195,102 @@ export interface FileRequirement {
 	requiredColumns: ColumnRequirement[];
 	acceptedFormats: string[];
 }
+
+// Merged dataset visualization types
+export interface MergedVariable {
+    name: string;
+    type: "numerical" | "categorical" | "datetime";
+    description: string;
+    source_table: string;
+    high_cardinality: boolean;
+    join_key: boolean;
+}
+
+export interface MergedVariableInfo {
+    [key: string]: MergedVariable;
+}
+
+export interface MergedVariablesResponse {
+    variables: MergedVariableInfo;
+    count: number;
+    types: {
+        numerical: string[];
+        categorical: string[];
+        datetime: string[];
+    };
+}
+
+export interface MergedVisualizationRequest {
+    variable1: string;
+    variable2: string;
+    chart_type?: string;
+    limit?: number;
+    aggregation?: string;
+    filters?: {
+        [key: string]: any;
+    };
+}
+
+export interface MergedVisualizationPayload {
+    dataset_id: number;
+    analysis: {
+        variable1: {
+            name: string;
+            type: "numerical" | "categorical" | "datetime";
+            description: string;
+            source_table: string;
+            stats: any;
+        };
+        variable2: {
+            name: string;
+            type: "numerical" | "categorical" | "datetime";
+            description: string;
+            source_table: string;
+            stats: any;
+        };
+        relationship: {
+            data_points: number;
+            missing_data_pct: number;
+            correlation?: number;
+            correlation_p_value?: number;
+            correlation_strength?: string;
+            spearman_correlation?: number;
+            spearman_p_value?: number;
+            group_statistics?: any;
+            association_strength?: number;
+            association_interpretation?: string;
+            contingency_table?: any;
+            chi_square?: number;
+            chi_square_p_value?: number;
+            degrees_of_freedom?: number;
+            cramers_v?: number;
+        };
+        data_characteristics: {
+            data_points: number;
+            high_cardinality: boolean;
+            has_time_component: boolean;
+            mixed_types: boolean;
+            memory_efficient: boolean;
+        };
+    };
+    visualization: {
+        recommended_chart: string;
+        selected_chart: string;
+        alternatives: string[];
+        description: string;
+        plotly_config: any;
+    };
+    filters_applied: any;
+    data_limit: number;
+    aggregation: string | null;
+}
+
+export interface FilterConfig {
+    type: "range" | "multi-select" | "single-select";
+    field: string;
+    label: string;
+    options?: string[];
+    min?: number;
+    max?: number;
+    step?: number;
+}
